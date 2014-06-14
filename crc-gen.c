@@ -98,6 +98,11 @@ static uint8_t fls(llu num)
 	return next_set_bit(num, BITS_IN(num));
 }
 
+static uint8_t fls_nz(llu num)
+{
+	return next_set_bit_nz(num, BITS_IN(num));
+}
+
 static llu align_left(llu num, uint8_t bit_space)
 {
 	return num << (bit_space - next_set_bit(num, bit_space));
@@ -169,43 +174,42 @@ static llu align_left(llu num, uint8_t bit_space)
 
 static struct llu_pair poly_div(llu numerator, llu denominator)
 {
-	uint8_t shift_ct = 0, next_bit, prev_shift_ct;
-	uint8_t pos = BITS_IN(numerator) + 1;
-	uint8_t denom_bits = fls(denominator);
-	llu quotient = 0;
 	assert(numerator != 0);
-	/* essentially, flsll() */
-	pos = next_set_bit_nz(numerator, pos);
-	/* denom might not even fit once */
-	if (pos < denom_bits) {
-		printf("1 pos = 0x%x < denom_bits = 0x%x\n", pos, denom_bits);
-		return (struct llu_pair) { 0, numerator };
-	}
 
-	uint8_t denom_shift_rem = pos - denom_bits;
-	llu shifted_denom = denominator << denom_shift_rem;
+	int8_t denom_bits = fls(denominator);
+	int8_t numer_bits = fls_nz(numerator);
+	/* How far the denominator is currently shifted left */
+	int8_t denom_shift = numer_bits - denom_bits;
+	llu shifted_denom = denominator << denom_shift;
+	llu quotient = 0;
 
+	if (numer_bits < denom_bits)
+		return (struct llu_pair) { quotient, numerator };
+
+	numerator ^= shifted_denom;
+	quotient ++;
+
+	int8_t next_shift_ct = 0;
+	int8_t next_bit = numer_bits;
 	for (;;) {
-		printf("N 0x%llx ^ 0x%llx = 0x%llx\n", numerator, shifted_denom, numerator ^ shifted_denom);
-		numerator ^= shifted_denom;
 
-		prev_shift_ct = shift_ct;
-		next_bit = next_set_bit(numerator, pos);
-		shift_ct = pos - next_bit;
-		denom_shift_rem -= shift_ct;
+		int8_t prev_bit = next_bit;
+		next_bit = fls(numerator);
+		next_shift_ct = prev_bit - next_bit;
 
-		printf("DENUM SHIFT REM 0x%x < 0x%x\n", denom_shift_rem, denom_bits);
-		if (denom_shift_rem < denom_bits) {
-			quotient <<= denom_shift_rem;
+		if (next_shift_ct > denom_shift) {
+			quotient <<= denom_shift;
 			return (struct llu_pair) { quotient, numerator };
 		}
-		printf("Q 0x%llx << %d | 1 = 0x%llx\n", quotient, prev_shift_ct, (quotient << prev_shift_ct) | 1);
-		quotient <<= prev_shift_ct;
+
+		denom_shift -= next_shift_ct;
+		shifted_denom >>= next_shift_ct;
+		assert(shifted_denom);
+
+		quotient <<= next_shift_ct;
 		quotient |= 1;
 
-		printf("SHIFT DENOM = 0x%llx (%d)\n", shifted_denom, shift_ct);
-		shifted_denom >>= shift_ct;
-		assert(shifted_denom);
+		numerator ^= shifted_denom;
 	}
 }
 

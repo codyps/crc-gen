@@ -16,6 +16,7 @@ typedef unsigned long long llu;
 struct llu_pair {
 	llu a, b;
 };
+#define LLU(a) ((llu)a)
 #define LP(_a, _b) ((struct llu_pair){(_a), (_b)})
 #define LLU_EQ(_a, _b) (((_a).a == (_b).a) && ((_a).b == (_b).b))
 #define LLU_PAIR_EXP(_a) (_a).a, (_a).b
@@ -25,7 +26,7 @@ struct llu_pair {
 #if TEST
 static unsigned long test__error_ct = 0;
 #define test_eq_xp(a, b) test_eq_fmt_exp((a), (b), LLU_FMT, LLU_PAIR_EXP, LLU_EQ)
-#define test_eq_x(a, b) test_eq_fmt((llu)(a), (llu)(b), "0x%llx")
+#define test_eq_x(a, b) test_eq_fmt_exp((a), (b), "0x%llx", LLU, EQ)
 #define test_eq_fmt(a, b, fmt) test_eq_fmt_exp(a, b, fmt, UNIT, EQ)
 #define test_eq_fmt_exp(a, b, fmt, exp, eq) do {			\
 	typeof(a) __test_eq_a = (a);						\
@@ -174,7 +175,76 @@ static llu align_left(llu num, uint8_t bit_space)
 
  */
 
-static struct llu_pair poly_div_base(llu numerator, llu denominator, uint8_t extend_numerator)
+/*
+ * extend the numerator with W zeros, where W is (fls(denominator) - 1)
+ */
+static struct llu_pair poly_div_base(llu numerator, llu denominator, int8_t extend)
+{
+	assert(numerator != 0);
+
+	int8_t denom_bits = fls(denominator);
+	int8_t numer_bits = fls_nz(numerator);
+	/* How far the denominator is currently shifted left */
+	llu shifted_denom = denominator << (numer_bits - denom_bits);
+	int8_t denom_shift = numer_bits - denom_bits;
+	llu quotient = 0;
+
+	if (numer_bits < denom_bits)
+		return (struct llu_pair) { quotient, numerator };
+
+	printf("> n 0x%04llx d 0x%04llx e 0x%02x\n", numerator, denominator, extend);
+
+	int8_t next_bit = numer_bits;
+	int8_t next_shift_ct = 0;
+	for (;;) {
+		quotient <<= next_shift_ct;
+		quotient |= 1;
+
+		numerator ^= shifted_denom;
+
+		int8_t prev_bit = next_bit;
+		next_bit = fls(numerator);
+		next_shift_ct = prev_bit - next_bit;
+
+		if (next_shift_ct > (denom_shift + extend)) {
+			quotient <<= (denom_shift + extend);
+			return (struct llu_pair) { quotient, numerator };
+		}
+
+		denom_shift -= next_shift_ct;
+		numerator <<= next_shift_ct;
+
+		printf(" N 0x%04llx ds 0x%02x nsc 0x%02x\n", numerator, denom_shift, next_shift_ct);
+	}
+}
+
+
+/* Based on http://www.zlib.net/crc_v3.txt "SIMPLE",
+ * currently BROKEN */
+static llu crc_update_simple(llu msg, int8_t msg_bits,
+		llu rem, llu poly, int8_t poly_bits)
+{
+	llu reg = rem;
+	llu msg_mask = 1 << (msg_bits - 1);
+	llu reg_mask = 1 << (poly_bits - 1);
+	while(msg_bits) {
+		bool bit = !!(reg & reg_mask);
+		reg <<= 1;
+		reg |= !!(msg & msg_mask);
+
+		msg_bits --;
+		msg_mask <<= 1;
+
+		if (bit)
+			reg ^= poly;
+	}
+
+	return reg;
+}
+
+
+#if 0
+static struct llu_pair poly_div(llu numerator, llu denominator)
 {
 	assert(numerator != 0);
 
@@ -210,11 +280,12 @@ static struct llu_pair poly_div_base(llu numerator, llu denominator, uint8_t ext
 		assert(shifted_denom);
 	}
 }
-
+#else
 static struct llu_pair poly_div(llu numerator, llu denominator)
 {
 	return poly_div_base(numerator, denominator, 0);
 }
+#endif
 
 static llu crc_update(llu msg, llu poly)
 {
@@ -244,11 +315,12 @@ int main(int argc, char **argv)
 	test_eq_x(1, fls(1));
 	test_eq_x(5, fls(0x10));
 	test_eq_x(4, fls(0xf));
-	test_eq_x(0xf000, align_left(0xf, 16));
+	test_eq_x(0xf000u, align_left(0xf, 16));
 	test_eq_xp(LP(778, 14), poly_div(0x35b0, 0x13));
 	test_eq_xp(LP(0, 0x10), poly_div(0x10, 0x10 << 1));
 	test_eq_xp(LP(778, 14), poly_div_base(0x35b, 0x13, 4));
-	test_eq_x(14, crc_update(0x35b, 0x13));
+	test_eq_x(14u, crc_update(0x35b, 0x13));
+	test_eq_x(14u, crc_update_simple(0x35b, fls(0x35b), 0, 0x13, fls(0x13)));
 	test_done();
 
 	return 0;

@@ -218,25 +218,67 @@ static struct llu_pair poly_div_base(llu numerator, llu denominator, int8_t exte
 	}
 }
 
+#if 0
+struct bit_seq {
+	llu data;
+	int8_t bits; /* # of bits */
 
-/* Based on http://www.zlib.net/crc_v3.txt "SIMPLE",
- * currently BROKEN */
+	/* calculated */
+	llu top_bit_mask;
+	llu mask;
+};
+
+static bool bit_seq_shift_left(struct bit_seq *b)
+{
+	bool bit = b->data & b->top_bit_mask;
+	b->data = (b->data << 1) & b->mask;
+	return bit;
+}
+
+static void bit_seq_xor(struct bit_seq *a, struct bit_seq *b)
+{
+
+}
+#endif
+
+/* Based on http://www.zlib.net/crc_v3.txt "SIMPLE" method.
+ * -----
+ * Load the register with zero bits.
+ * Augment the message by appending W zero bits to the end of it.
+ * While (more message bits)
+ *    Begin
+ *    Shift the register left by one bit, reading the next bit of the
+ *       augmented message into register bit position 0.
+ *    If (a 1 bit popped out of the register during step 3)
+ *       Register = Register XOR Poly.
+ *    End
+ * The register now contains the remainder.
+ */
 static llu crc_update_simple(llu msg, int8_t msg_bits,
 		llu rem, llu poly, int8_t poly_bits)
 {
+	/* Load the register with zero bits. */
 	llu reg = rem;
-	llu msg_mask = 1 << (msg_bits - 1);
-	llu reg_mask = 1 << (poly_bits - 1);
-	while(msg_bits) {
-		bool bit = !!(reg & reg_mask);
+
+	llu msg_bit_mask = 1 << (msg_bits - 1);
+	llu reg_mask = (1 << (poly_bits - 1)) - 1;
+	llu reg_bit_mask = 1 << (poly_bits - 2);
+
+	/* While (more message bits)
+	 * (the "--poly_bits" serves to extend the message by W bits) */
+	while(msg_bits || (--poly_bits)) {
+		bool bit = !!(reg & reg_bit_mask);
 		reg <<= 1;
-		reg |= !!(msg & msg_mask);
+		reg |= !!(msg & msg_bit_mask);
 
 		msg_bits --;
-		msg_mask <<= 1;
+		msg_bit_mask >>= 1;
 
-		if (bit)
+		/* if a 1 bit poped out, xor reg with poly */
+		if (bit) {
 			reg ^= poly;
+			reg &= reg_mask;
+		}
 	}
 
 	return reg;

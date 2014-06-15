@@ -3,6 +3,7 @@
 #include <stdint.h>
 #include <limits.h>
 #include <assert.h>
+#include <stdbool.h>
 
 
 #define BUILD_BUG_ON_INVALID(e) ((void)(sizeof((long)(e))))
@@ -15,6 +16,7 @@ typedef unsigned long long llu;
 struct llu_pair {
 	llu a, b;
 };
+#define LP(_a, _b) ((struct llu_pair){(_a), (_b)})
 #define LLU_EQ(_a, _b) (((_a).a == (_b).a) && ((_a).b == (_b).b))
 #define LLU_PAIR_EXP(_a) (_a).a, (_a).b
 #define LLU_FMT "0x%llx 0x%llx"
@@ -172,26 +174,27 @@ static llu align_left(llu num, uint8_t bit_space)
 
  */
 
-static struct llu_pair poly_div(llu numerator, llu denominator)
+static struct llu_pair poly_div_base(llu numerator, llu denominator, uint8_t extend_numerator)
 {
 	assert(numerator != 0);
 
 	int8_t denom_bits = fls(denominator);
 	int8_t numer_bits = fls_nz(numerator);
 	/* How far the denominator is currently shifted left */
+	llu shifted_denom = denominator << (numer_bits - denom_bits);
 	int8_t denom_shift = numer_bits - denom_bits;
-	llu shifted_denom = denominator << denom_shift;
 	llu quotient = 0;
 
 	if (numer_bits < denom_bits)
 		return (struct llu_pair) { quotient, numerator };
 
-	numerator ^= shifted_denom;
-	quotient ++;
-
 	int8_t next_shift_ct = 0;
 	int8_t next_bit = numer_bits;
 	for (;;) {
+		quotient <<= next_shift_ct;
+		quotient |= 1;
+
+		numerator ^= shifted_denom;
 
 		int8_t prev_bit = next_bit;
 		next_bit = fls(numerator);
@@ -205,12 +208,20 @@ static struct llu_pair poly_div(llu numerator, llu denominator)
 		denom_shift -= next_shift_ct;
 		shifted_denom >>= next_shift_ct;
 		assert(shifted_denom);
-
-		quotient <<= next_shift_ct;
-		quotient |= 1;
-
-		numerator ^= shifted_denom;
 	}
+}
+
+static struct llu_pair poly_div(llu numerator, llu denominator)
+{
+	return poly_div_base(numerator, denominator, 0);
+}
+
+static llu crc_update(llu msg, llu poly)
+{
+	printf("EXTEND 0x%x\n", fls(poly) - 1);
+	struct llu_pair p = poly_div_base(msg, poly, fls(poly) - 1);
+	printf("A 0x%llx\n", p.a);
+	return p.b;
 }
 
 int main(int argc, char **argv)
@@ -234,9 +245,11 @@ int main(int argc, char **argv)
 	test_eq_x(5, fls(0x10));
 	test_eq_x(4, fls(0xf));
 	test_eq_x(0xf000, align_left(0xf, 16));
-	test_eq_xp(((struct llu_pair){ 778, 14 }), poly_div(0x35b0, 0x13));
+	test_eq_xp(LP(778, 14), poly_div(0x35b0, 0x13));
+	test_eq_xp(LP(0, 0x10), poly_div(0x10, 0x10 << 1));
+	test_eq_xp(LP(778, 14), poly_div_base(0x35b, 0x13, 4));
+	test_eq_x(14, crc_update(0x35b, 0x13));
 	test_done();
-
 
 	return 0;
 }

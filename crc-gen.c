@@ -5,6 +5,7 @@
 #include <assert.h>
 #include <stdbool.h>
 
+#include "printf-ext.h"
 
 #define BUILD_BUG_ON_INVALID(e) ((void)(sizeof((long)(e))))
 __attribute__((format(printf,1,2)))
@@ -284,8 +285,76 @@ static llu crc_update_simple(llu msg, int8_t msg_bits,
 	return reg;
 }
 
+static llu poly_mult(llu a, llu b)
+{
+	llu r = 0;
+	while (a) {
+		r ^= b;
+		b <<= 1;
+		a--;
+	}
 
+	return r;
+}
+
+static llu poly_undiv_(struct llu_pair p, llu m)
+{
+	return poly_mult(p.a, m) ^ p.b;
+}
+
+/* like the below poly_div(), but instead of shifting the denominator down,
+ * shift the numerator up */
+static struct llu_pair poly_div_shift_numer(llu numerator, llu denominator)
+{
+	assert(numerator != 0);
+
+#define PS(msg) printf(">> %-17s | Q %#llx N %#llx nsc 0x%x\n", msg, quotient, numerator, next_shift_ct)
+
+	printf("--\n");
+
+	int8_t denom_bits = fls(denominator);
+	int8_t numer_bits = fls_nz(numerator);
+	int8_t denom_shift = numer_bits - denom_bits;
+	llu quotient = 0;
+	int8_t next_shift_ct = 0;
+
+	if (numer_bits < denom_bits)
+		return (struct llu_pair) { quotient, numerator };
+
+	/* align it's first bit with the numerator's first bit */
+	PS("- denom shift");
+	denominator <<= denom_shift;
+	PS("+ denom shift");
+
+	for (;;) {
+		PS("- quotient update");
+		quotient <<= next_shift_ct;
+		quotient |= 1;
+		PS("+ quotient update");
+
+		numerator ^= denominator;
+		next_shift_ct = numer_bits - fls(numerator);
+
+		PS("- exit check");
+		if (next_shift_ct > denom_shift) {
+			printf("ds = %#x\n", denom_shift);
+			return (struct llu_pair) {
+				//quotient << (next_shift_ct - 1), // works
+				//numerator >> (numer_bits - denom_bits - 1) //works with #1, broken #2
+				quotient << (denom_shift + 1),
+				numerator >> (numer_bits - denom_bits + denom_shift)
+			};
+		}
+
+		PS("- shift updates");
+		denom_shift -= next_shift_ct;
+		numerator <<= next_shift_ct;
+		PS("+ shift updates");
+	}
+}
 #if 0
+/* use fls() and shift the denominator along to perform polynomial division.
+ * Assumes that all bits in the poly fit into numerator/denominator */
 static struct llu_pair poly_div(llu numerator, llu denominator)
 {
 	assert(numerator != 0);
@@ -339,6 +408,8 @@ static llu crc_update(llu msg, llu poly)
 
 int main(int argc, char **argv)
 {
+	register_printf_b();
+
 	if (argc != 2)
 		USAGE;
 
@@ -363,6 +434,8 @@ int main(int argc, char **argv)
 	test_eq_xp(LP(778, 14), poly_div_base(0x35b, 0x13, 4));
 	test_eq_x(14u, crc_update(0x35b, 0x13));
 	test_eq_x(14u, crc_update_simple(0x35b, fls(0x35b), 0, 0x13, fls(0x13)));
+	test_eq_xp(LP(778, 14), poly_div_shift_numer(0x35b0, 0x13));
+	test_eq_xp(LP(806, 0xf), poly_div_shift_numer(0x35b0, (0x12 << 1) | 1));
 	test_done();
 
 	return 0;

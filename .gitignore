@@ -1,2 +1,4 @@
 .TRACK-*
 crc-gen
+.tup/
+test-log

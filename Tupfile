@@ -1,0 +1,4 @@
+: foreach *.c |> gcc %f -Wall -c -o %o |> %B.o
+: *.o |> gcc %f -o %o    |> crc-gen
+
+

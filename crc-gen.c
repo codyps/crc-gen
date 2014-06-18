@@ -162,7 +162,8 @@ static void bit_seq_xor(struct bit_seq *a, struct bit_seq *b)
 }
 #endif
 
-/* Based on http://www.zlib.net/crc_v3.txt "SIMPLE" method.
+/*
+ * Based on http://www.zlib.net/crc_v3.txt "SIMPLE" method.
  * -----
  * Load the register with zero bits.
  * Augment the message by appending W zero bits to the end of it.
@@ -174,6 +175,10 @@ static void bit_seq_xor(struct bit_seq *a, struct bit_seq *b)
  *       Register = Register XOR Poly.
  *    End
  * The register now contains the remainder.
+ * -----
+ *
+ * iterates over every single bit, uses an explicit "register" to shift
+ * through.
  */
 static llu crc_update_simple(llu msg, int8_t msg_bits,
 		llu rem, llu poly, int8_t poly_bits)
@@ -224,12 +229,10 @@ static llu poly_undiv_(struct llu_pair p, llu m)
 
 /* like the below poly_div(), but instead of shifting the denominator down,
  * shift the numerator up */
-static struct llu_pair poly_div_shift_numer(llu numerator, llu denominator)
+static struct llu_pair poly_div_shift_numer_(llu numerator, int8_t numer_bits, llu denominator, int8_t denom_bits)
 {
-	assert(numerator != 0);
+	assert(numer_bits);
 
-	int8_t denom_bits = fls(denominator);
-	int8_t numer_bits = fls_nz(numerator);
 	int8_t denom_shift = numer_bits - denom_bits;
 	int8_t denom_shift_orig = denom_shift;
 	llu quotient = 0;
@@ -257,6 +260,12 @@ static struct llu_pair poly_div_shift_numer(llu numerator, llu denominator)
 		denom_shift -= next_shift_ct;
 		numerator <<= next_shift_ct;
 	}
+}
+
+static struct llu_pair poly_div_shift_numer(llu numerator, llu denominator)
+{
+	assert(numerator);
+	return poly_div_shift_numer_(numerator, fls_nz(numerator), denominator, fls(denominator));
 }
 #if 0
 /* use fls() and shift the denominator along to perform polynomial division.

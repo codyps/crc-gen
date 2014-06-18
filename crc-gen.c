@@ -1,19 +1,17 @@
+#define TEST 1
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdint.h>
 #include <limits.h>
 #include <assert.h>
 #include <stdbool.h>
+#include <penny/penny.h>
+#include <penny/print.h>
+#include <penny/test.h>
 
 #include "printf-ext.h"
 
-#define BUILD_BUG_ON_INVALID(e) ((void)(sizeof((long)(e))))
-__attribute__((format(printf,1,2)))
-static inline void printf_check_fmt(const char *fmt __attribute__((unused)), ...)
-{}
-typedef unsigned long long llu;
-#define UNIT(x) x
-#define EQ(a, b) ((a) == (b))
 struct llu_pair {
 	llu a, b;
 };
@@ -23,36 +21,6 @@ struct llu_pair {
 #define LLU_PAIR_EXP(_a) (_a).a, (_a).b
 #define LLU_FMT "0x%llx 0x%llx"
 
-#define TEST 1
-#if TEST
-static unsigned long test__error_ct = 0;
-#define test_eq_xp(a, b) test_eq_fmt_exp((a), (b), LLU_FMT, LLU_PAIR_EXP, LLU_EQ)
-#define test_eq_x(a, b) test_eq_fmt_exp((a), (b), "0x%llx", LLU, EQ)
-#define test_eq_fmt(a, b, fmt) test_eq_fmt_exp(a, b, fmt, UNIT, EQ)
-#define test_eq_fmt_exp(a, b, fmt, exp, eq) do {			\
-	typeof(a) __test_eq_a = (a);						\
-	typeof(b) __test_eq_b = (b);						\
-	if (!eq((__test_eq_a), (__test_eq_b))) {				\
-		fprintf(stderr, "TEST FAILURE: %s ("fmt") != %s ("fmt")\n",	\
-				#a, exp(__test_eq_a), #b, exp(__test_eq_b));	\
-		test__error_ct ++;						\
-	}									\
-} while(0)
-#define test_done() do {							\
-	if (test__error_ct > 0)	{						\
-		fprintf(stderr, "TESTS FAILED: %lu, exiting\n", test__error_ct);	\
-		exit(1);							\
-	}									\
-} while(0)
-#else
-#define test_eq_x(a, b) BUILD_BUG_ON_INVALID((a) == (b))
-#define test_eq_fmt(a, a_fmt, b, b_fmt) do {	\
-	BUILD_BUG_ON_INVALID((a) == (b));	\
-	printf_check_fmt(a_fmt b_fmt, a, b);	\
-} while(0)
-#define test(x) BUILD_BUG_ON_INVALID(e)
-#define test_done() do {} while(0)
-#endif
 
 static void usage(const char *prgm)
 {
@@ -61,56 +29,6 @@ static void usage(const char *prgm)
 	exit(EXIT_FAILURE);
 }
 #define USAGE usage(argc?argv[0]:"crc-gen")
-#define BITS_IN(type) (CHAR_BIT * sizeof(type))
-
-/**
- * fls_next(num, bit_idx) - find the next set bit, searching from the left
- * "find last set next"
- *
- * num: number to search for bits
- * bit_idx: The highest 1-indexed bit to examine (or the highest 0-indexed bit
- *          + 1)
- */
-static uint8_t next_set_bit(llu num, uint8_t bit_idx)
-{
-	for (;;) {
-		if (bit_idx == 0)
-			return 0;
-		if (num & (1llu << (bit_idx - 1llu)))
-			return bit_idx;
-		bit_idx --;
-	}
-}
-
-static uint8_t next_set_bit_nz(llu num, uint8_t bit_idx)
-{
-	for (;;) {
-		if (num & (1llu << (bit_idx - 1llu)))
-			return bit_idx;
-		bit_idx --;
-	}
-}
-
-/**
- * fls(num) - find the last (most significant) set bit
- *
- * Returns (the left shift of the found set bit) + 1
- *     If no set bit is found, returns 0.
- */
-static uint8_t fls(llu num)
-{
-	return next_set_bit(num, BITS_IN(num));
-}
-
-static uint8_t fls_nz(llu num)
-{
-	return next_set_bit_nz(num, BITS_IN(num));
-}
-
-static llu align_left(llu num, uint8_t bit_space)
-{
-	return num << (bit_space - next_set_bit(num, bit_space));
-}
 
 /*
             1100001010
@@ -322,22 +240,23 @@ static struct llu_pair poly_div_shift_numer(llu numerator, llu denominator)
 		return (struct llu_pair) { quotient, numerator };
 
 	/* align it's first bit with the numerator's first bit */
-	PS("- denom shift");
 	denominator <<= denom_shift;
-	PS("+ denom shift");
 
 	for (;;) {
-		PS("- quotient update");
 		quotient <<= next_shift_ct;
 		quotient |= 1;
-		PS("+ quotient update");
 
 		numerator ^= denominator;
 		next_shift_ct = numer_bits - fls(numerator);
 
-		PS("- exit check");
 		if (next_shift_ct > denom_shift) {
-			printf("ds = %#x\n", denom_shift);
+#define D(x, fmt) printf(#x " = %#" #fmt "\n", x)
+			D(numer_bits, x);
+			D(denom_bits, x);
+			D(denom_shift, x);
+			D(next_shift_ct, x);
+			D(numer_bits - denom_bits - 1, x);
+
 			return (struct llu_pair) {
 				//quotient << (next_shift_ct - 1), // works
 				//numerator >> (numer_bits - denom_bits - 1) //works with #1, broken #2
@@ -346,10 +265,8 @@ static struct llu_pair poly_div_shift_numer(llu numerator, llu denominator)
 			};
 		}
 
-		PS("- shift updates");
 		denom_shift -= next_shift_ct;
 		numerator <<= next_shift_ct;
-		PS("+ shift updates");
 	}
 }
 #if 0

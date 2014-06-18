@@ -21,6 +21,8 @@ struct llu_pair {
 #define LLU_PAIR_EXP(_a) (_a).a, (_a).b
 #define LLU_FMT "0x%llx 0x%llx"
 
+#define B(x) do { printf("0b"); print_bits_llu(x, stdout); printf("\n"); } while (0)
+#define D(x, fmt) printf(#x " = %#" #fmt "\n", x)
 
 static void usage(const char *prgm)
 {
@@ -226,13 +228,10 @@ static struct llu_pair poly_div_shift_numer(llu numerator, llu denominator)
 {
 	assert(numerator != 0);
 
-#define PS(msg) printf(">> %-17s | Q %#llx N %#llx nsc 0x%x\n", msg, quotient, numerator, next_shift_ct)
-
-	printf("--\n");
-
 	int8_t denom_bits = fls(denominator);
 	int8_t numer_bits = fls_nz(numerator);
 	int8_t denom_shift = numer_bits - denom_bits;
+	int8_t denom_shift_orig = denom_shift;
 	llu quotient = 0;
 	int8_t next_shift_ct = 0;
 
@@ -250,19 +249,9 @@ static struct llu_pair poly_div_shift_numer(llu numerator, llu denominator)
 		next_shift_ct = numer_bits - fls(numerator);
 
 		if (next_shift_ct > denom_shift) {
-#define D(x, fmt) printf(#x " = %#" #fmt "\n", x)
-			D(numer_bits, x);
-			D(denom_bits, x);
-			D(denom_shift, x);
-			D(next_shift_ct, x);
-			D(numer_bits - denom_bits - 1, x);
-
-			return (struct llu_pair) {
-				//quotient << (next_shift_ct - 1), // works
-				//numerator >> (numer_bits - denom_bits - 1) //works with #1, broken #2
-				quotient << (denom_shift + 1),
-				numerator >> (numer_bits - denom_bits + denom_shift)
-			};
+			quotient  <<= denom_shift;
+			numerator >>= denom_shift_orig - denom_shift;
+			return (struct llu_pair) { quotient, numerator };
 		}
 
 		denom_shift -= next_shift_ct;
@@ -352,7 +341,7 @@ int main(int argc, char **argv)
 	test_eq_x(14u, crc_update(0x35b, 0x13));
 	test_eq_x(14u, crc_update_simple(0x35b, fls(0x35b), 0, 0x13, fls(0x13)));
 	test_eq_xp(LP(778, 14), poly_div_shift_numer(0x35b0, 0x13));
-	test_eq_xp(LP(806, 0xf), poly_div_shift_numer(0x35b0, (0x12 << 1) | 1));
+	test_eq_xp(LP(403, 0xf), poly_div_shift_numer(0x35b0, (0x12 << 1) | 1));
 	test_done();
 
 	return 0;

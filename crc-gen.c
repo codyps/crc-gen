@@ -1,4 +1,6 @@
+
 #define TEST 1
+#define TEST_FILE stdout
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -96,49 +98,6 @@ static void usage(const char *prgm)
 
  */
 
-/*
- * extend the numerator with W zeros, where W is (fls(denominator) - 1)
- */
-static struct llu_pair poly_div_base(llu numerator, llu denominator, int8_t extend)
-{
-	assert(numerator != 0);
-
-	int8_t denom_bits = fls(denominator);
-	int8_t numer_bits = fls_nz(numerator);
-	/* How far the denominator is currently shifted left */
-	llu shifted_denom = denominator << (numer_bits - denom_bits);
-	int8_t denom_shift = numer_bits - denom_bits;
-	llu quotient = 0;
-
-	if (numer_bits < denom_bits)
-		return (struct llu_pair) { quotient, numerator };
-
-	printf("> n 0x%04llx d 0x%04llx e 0x%02x\n", numerator, denominator, extend);
-
-	int8_t next_bit = numer_bits;
-	int8_t next_shift_ct = 0;
-	for (;;) {
-		quotient <<= next_shift_ct;
-		quotient |= 1;
-
-		numerator ^= shifted_denom;
-
-		int8_t prev_bit = next_bit;
-		next_bit = fls(numerator);
-		next_shift_ct = prev_bit - next_bit;
-
-		if (next_shift_ct > (denom_shift + extend)) {
-			quotient <<= (denom_shift + extend);
-			return (struct llu_pair) { quotient, numerator };
-		}
-
-		denom_shift -= next_shift_ct;
-		numerator <<= next_shift_ct;
-
-		printf(" N 0x%04llx ds 0x%02x nsc 0x%02x\n", numerator, denom_shift, next_shift_ct);
-	}
-}
-
 #if 0
 struct bit_seq {
 	llu data;
@@ -214,9 +173,10 @@ static llu poly_mult(llu a, llu b)
 {
 	llu r = 0;
 	while (a) {
-		r ^= b;
+		if (a & 1)
+			r ^= b;
 		b <<= 1;
-		a--;
+		a >>= 1;
 	}
 
 	return r;
@@ -232,6 +192,8 @@ static llu poly_undiv_(struct llu_pair p, llu m)
 static struct llu_pair poly_div_shift_numer_(llu numerator, int8_t numer_bits, llu denominator, int8_t denom_bits)
 {
 	assert(numer_bits);
+	assert(numer_bits <= 64);
+	assert(denom_bits <= 64);
 
 	int8_t denom_shift = numer_bits - denom_bits;
 	int8_t denom_shift_orig = denom_shift;
@@ -267,7 +229,7 @@ static struct llu_pair poly_div_shift_numer(llu numerator, llu denominator)
 	assert(numerator);
 	return poly_div_shift_numer_(numerator, fls_nz(numerator), denominator, fls(denominator));
 }
-#if 0
+
 /* use fls() and shift the denominator along to perform polynomial division.
  * Assumes that all bits in the poly fit into numerator/denominator */
 static struct llu_pair poly_div(llu numerator, llu denominator)
@@ -306,20 +268,6 @@ static struct llu_pair poly_div(llu numerator, llu denominator)
 		assert(shifted_denom);
 	}
 }
-#else
-static struct llu_pair poly_div(llu numerator, llu denominator)
-{
-	return poly_div_base(numerator, denominator, 0);
-}
-#endif
-
-static llu crc_update(llu msg, llu poly)
-{
-	printf("EXTEND 0x%x\n", fls(poly) - 1);
-	struct llu_pair p = poly_div_base(msg, poly, fls(poly) - 1);
-	printf("A 0x%llx\n", p.a);
-	return p.b;
-}
 
 int main(int argc, char **argv)
 {
@@ -343,14 +291,12 @@ int main(int argc, char **argv)
 	test_eq_x(1, fls(1));
 	test_eq_x(5, fls(0x10));
 	test_eq_x(4, fls(0xf));
-	test_eq_x(0xf000u, align_left(0xf, 16));
 	test_eq_xp(LP(778, 14), poly_div(0x35b0, 0x13));
 	test_eq_xp(LP(0, 0x10), poly_div(0x10, 0x10 << 1));
-	test_eq_xp(LP(778, 14), poly_div_base(0x35b, 0x13, 4));
-	test_eq_x(14u, crc_update(0x35b, 0x13));
 	test_eq_x(14u, crc_update_simple(0x35b, fls(0x35b), 0, 0x13, fls(0x13)));
 	test_eq_xp(LP(778, 14), poly_div_shift_numer(0x35b0, 0x13));
 	test_eq_xp(LP(403, 0xf), poly_div_shift_numer(0x35b0, (0x12 << 1) | 1));
+	test_eq_x(poly_undiv_(LP(403, 0xf), (0x12 << 1) | 1), 0x35b0);
 	test_done();
 
 	return 0;

@@ -1,0 +1,12 @@
+
+WARN_CFLAGS = -Wall -Wextra
+CFLAGS   += $(WARN_CFLAGS)
+CXXFLAGS += $(CFLAGS)
+
+ALL_CFLAGS   += $(CFLAGS)
+ALL_CXXFLAGS += $(CXXFLAGS)
+
+!cc =       |> ^ CC    %f^$(CC)  $(ALL_CFLAGS)     $(CFLAGS-%o) -c %f -o %o   |> %B.o
+!cc-link =  |> ^ CCLD  %f^$(CC)  $(ALL_CLDFLAGS)   $(LDFLAGS-%o) -o %o        |>
+!cxx =      |> ^ CXX   %f^$(CXX) $(ALL_CXXFLAGS)   $(CXXFLAGS-%o) -c %f -o %o |> %B.o
+!cxx-link = |> ^ CXXLD %f^$(CXX) $(ALL_CXXLDFLAGS) $(LDFLAGS-%o) %o           |>

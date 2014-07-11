@@ -1,3 +1,7 @@
-: foreach *.c | *.h |> gcc %f -I. -Wall -c -o %o |> %B.o
-: *.o |> gcc %f -o %o    |> crc-gen
-: crc-gen |> ./%f 0 >%o 2>&1 | cat |> test-log
+include_rules
+
+#CC=gcc
+
+#: foreach *.c | *.h ccan/config.h |> !cc |>
+#: *.o ccan/libccan.a |> !cc-link |> crc-gen
+#: crc-gen |> ./%f 0 >%o 2>&1 | cat |> test-log

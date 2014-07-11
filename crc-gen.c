@@ -12,6 +12,8 @@
 #include <penny/print.h>
 #include <penny/test.h>
 
+#include <ccan/darray/darray.h>
+
 #include "printf-ext.h"
 
 struct llu_pair {
@@ -98,28 +100,95 @@ static void usage(const char *prgm)
 
  */
 
-#if 0
-struct bit_seq {
-	llu data;
-	int8_t bits; /* # of bits */
-
-	/* calculated */
-	llu top_bit_mask;
-	llu mask;
+enum num_type {
+	NT_KNOWN,
+	NT_SYM,
 };
 
-static bool bit_seq_shift_left(struct bit_seq *b)
-{
-	bool bit = b->data & b->top_bit_mask;
-	b->data = (b->data << 1) & b->mask;
-	return bit;
-}
+struct num;
+/* num_bit *-> num */
+struct num_bit {
+	struct num *num;
+	llu bit_idx;
+};
+#define BITS_MAX(_t) (CHAR_BIT * sizeof(_t))
+struct num {
+	enum num_type nt;
+	llu val;
+	char *name;
+	/* Hack so we can avoid doing a bunch of allocations */
+	struct num_bit bits[BITS_IN(llu)];
+};
 
-static void bit_seq_xor(struct bit_seq *a, struct bit_seq *b)
-{
+enum bit_expr_type {
+	BO_BIT,
+	BO_XOR,
+};
 
-}
+struct bit_expr_bit {
+	struct num_bit *bit;
+};
+
+struct bit_expr;
+struct bit_expr_xor {
+	struct bit_expr *exprs[2];
+};
+
+struct bit_expr {
+	enum bit_expr_type type;
+	union {
+		struct bit_expr_bit bit;
+		struct bit_expr_xor xor;
+	};
+};
+
+#if 0
+/* bit_seq_exprs */
+/*
+	BO_SLICE,
+	BO_APPEND,
+ */
+struct expr_slice {
+	struct bit_expr *base;
+	unsigned start, end;
+};
+
+struct bit_expr_append {
+	struct bit_expr *exprs[2];
+};
 #endif
+
+#define BIT_EXPR_BIT(_b) (struct bit_expr){ .type = BO_BIT, .bit = BIT_LIT(_b) }
+
+struct bit_seq {
+	darray(struct bit_expr) bits;
+};
+
+#define BIT_SEQ_INIT darray_new()
+
+static struct bit_seq bit_seq_from_llu(llu v)
+{
+	struct bit_seq s = BIT_SEQ_INIT;
+	uint8_t c = fls(v);
+	darray_make_space(s, c);
+	uint8_t i;
+	for (i = 0; i < c; i++)
+		s.bits.item[i] = v & (1 << i);
+
+}
+
+/* XXX: do we want to operate on the bit level and then identify patterns at
+ * the end, or operate on larger values and try to massage them at the end to
+ * get useful patterns? */
+
+static bool bit_seq_shift_left(struct bit_seq b)
+{
+}
+
+static void bit_seq_xor(struct bit_seq a, struct bit_seq b)
+{
+
+}
 
 /*
  * Based on http://www.zlib.net/crc_v3.txt "SIMPLE" method.
@@ -140,6 +209,35 @@ static void bit_seq_xor(struct bit_seq *a, struct bit_seq *b)
  * through.
  */
 static llu crc_update_simple(llu msg, int8_t msg_bits,
+		llu rem, llu poly, int8_t poly_bits)
+{
+	/* Load the register with zero bits. */
+	llu reg = rem;
+
+	llu msg_bit_mask = 1 << (msg_bits - 1);
+	llu reg_mask = (1 << (poly_bits - 1)) - 1;
+	llu reg_bit_mask = 1 << (poly_bits - 2);
+
+	/* While (more message bits)
+	 * (the "--poly_bits" serves to extend the message by W bits) */
+	while(msg_bits || (--poly_bits)) {
+		bool bit = !!(reg & reg_bit_mask);
+		reg <<= 1;
+		reg |= !!(msg & msg_bit_mask);
+
+		msg_bits --;
+		msg_bit_mask >>= 1;
+
+		/* if a 1 bit poped out, xor reg with poly */
+		if (bit)
+			reg ^= poly;
+	}
+
+	reg &= reg_mask;
+	return reg;
+}
+
+static llu crc_update_simple_sym(llu msg, int8_t msg_bits,
 		llu rem, llu poly, int8_t poly_bits)
 {
 	/* Load the register with zero bits. */
@@ -189,7 +287,8 @@ static llu poly_undiv_(struct llu_pair p, llu m)
 
 /* like the below poly_div(), but instead of shifting the denominator down,
  * shift the numerator up */
-static struct llu_pair poly_div_shift_numer_(llu numerator, int8_t numer_bits, llu denominator, int8_t denom_bits)
+static struct llu_pair poly_div_shift_numer_(llu numerator, int8_t numer_bits,
+		llu denominator, int8_t denom_bits, llu rem)
 {
 	assert(numer_bits);
 	assert(numer_bits <= 64);
@@ -227,7 +326,7 @@ static struct llu_pair poly_div_shift_numer_(llu numerator, int8_t numer_bits, l
 static struct llu_pair poly_div_shift_numer(llu numerator, llu denominator)
 {
 	assert(numerator);
-	return poly_div_shift_numer_(numerator, fls_nz(numerator), denominator, fls(denominator));
+	return poly_div_shift_numer_(numerator, fls_nz(numerator), denominator, fls(denominator), 0);
 }
 
 /* use fls() and shift the denominator along to perform polynomial division.

@@ -158,13 +158,14 @@ struct bit_expr_append {
 };
 #endif
 
+#if 0
 #define BIT_EXPR_BIT(_b) (struct bit_expr){ .type = BO_BIT, .bit = BIT_LIT(_b) }
 
 struct bit_seq {
 	darray(struct bit_expr) bits;
 };
 
-#define BIT_SEQ_INIT darray_new()
+#define BIT_SEQ_INIT { darray_new() }
 
 static struct bit_seq bit_seq_from_llu(llu v)
 {
@@ -176,7 +177,9 @@ static struct bit_seq bit_seq_from_llu(llu v)
 		s.bits.item[i] = v & (1 << i);
 
 }
+#endif
 
+#if 0
 /* XXX: do we want to operate on the bit level and then identify patterns at
  * the end, or operate on larger values and try to massage them at the end to
  * get useful patterns? */
@@ -189,6 +192,7 @@ static void bit_seq_xor(struct bit_seq a, struct bit_seq b)
 {
 
 }
+#endif
 
 /*
  * Based on http://www.zlib.net/crc_v3.txt "SIMPLE" method.
@@ -237,34 +241,13 @@ static llu crc_update_simple(llu msg, int8_t msg_bits,
 	return reg;
 }
 
-static llu crc_update_simple_sym(llu msg, int8_t msg_bits,
-		llu rem, llu poly, int8_t poly_bits)
+static llu crc_update_simple_bytes(llu crc, llu poly, llu poly_bits,
+		uint8_t *msg, size_t msg_bytes)
 {
-	/* Load the register with zero bits. */
-	llu reg = rem;
-
-	llu msg_bit_mask = 1 << (msg_bits - 1);
-	llu reg_mask = (1 << (poly_bits - 1)) - 1;
-	llu reg_bit_mask = 1 << (poly_bits - 2);
-
-	/* While (more message bits)
-	 * (the "--poly_bits" serves to extend the message by W bits) */
-	while(msg_bits || (--poly_bits)) {
-		bool bit = !!(reg & reg_bit_mask);
-		reg <<= 1;
-		reg |= !!(msg & msg_bit_mask);
-
-		msg_bits --;
-		msg_bit_mask >>= 1;
-
-		/* if a 1 bit poped out, xor reg with poly */
-		if (bit) {
-			reg ^= poly;
-			reg &= reg_mask;
-		}
-	}
-
-	return reg;
+	size_t i;
+	for (i = 0; i < msg_bytes; i++)
+		crc = crc_update_simple(msg[i], 8, crc, poly, poly_bits);
+	return crc;
 }
 
 static llu poly_mult(llu a, llu b)
@@ -368,6 +351,9 @@ static struct llu_pair poly_div(llu numerator, llu denominator)
 	}
 }
 
+#define A(x) (x), sizeof(x)
+#define S(x) ((uint8_t *)x), (sizeof(x) - 1)
+
 int main(int argc, char **argv)
 {
 	register_printf_b();
@@ -396,6 +382,12 @@ int main(int argc, char **argv)
 	test_eq_xp(LP(778, 14), poly_div_shift_numer(0x35b0, 0x13));
 	test_eq_xp(LP(403, 0xf), poly_div_shift_numer(0x35b0, (0x12 << 1) | 1));
 	test_eq_x(poly_undiv_(LP(403, 0xf), (0x12 << 1) | 1), 0x35b0);
+
+	/* from "crcspeed" */
+	test_eq_x(0x31c3, crc_update_simple_bytes(0,      0x1021, fls(0x1021), S("123456789")));
+
+	/* from http://srecord.sourceforge.net/crc16-ccitt.html */
+	test_eq_x(0xE5CC, crc_update_simple_bytes(0xFFFF, 0x1021, fls(0x1021), S("123456789")));
 	test_done();
 
 	return 0;

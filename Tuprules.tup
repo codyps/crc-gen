@@ -1,3 +1,4 @@
+CC=gcc
 
 WARN_CFLAGS = -Wall -Wextra
 CFLAGS   += $(WARN_CFLAGS)

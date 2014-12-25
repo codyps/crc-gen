@@ -195,6 +195,43 @@ static void bit_seq_xor(struct bit_seq a, struct bit_seq b)
 }
 #endif
 
+/* assert(bits > 0) */
+#define bit_mask_nz(bits) ((UINTMAX_C(1) << ((bits) - 1) << 1) - 1)
+
+static inline uintmax_t bit_mask(unsigned bits)
+{
+	return bits ? bit_mask_nz(bits) : 0;
+}
+
+/*
+ * Based on crc16 from https://github.com/mattsta/crcspeed.git
+ */
+static
+ull crc_bytes(ull poly, int8_t poly_bits, ull crc, const void *in_data, size_t len, bool augment)
+{
+	assert((poly_bits % 8) == 0);
+	ull high_bit = 1 << (poly_bits - 1);
+	const uint8_t *data = in_data;
+	for (size_t i = 0; i < len; i++) {
+		crc ^= (data[i] << 8);
+		for (int j = 0; j < 8; j++) {
+			if (crc & high_bit)
+				crc = (crc << 1) ^ poly;
+			else
+				crc <<= 1;
+		}
+	}
+
+	if (augment)
+		for (int j = 0; j < poly_bits; j++) {
+			if (crc & high_bit)
+				crc = (crc << 1) ^ poly;
+			else
+				crc <<= 1;
+		}
+	return crc & bit_mask(poly_bits);
+}
+
 /*
  * Based on http://www.zlib.net/crc_v3.txt "SIMPLE" method.
  * -----
@@ -378,7 +415,7 @@ uint8_t hi8(uint16_t val)
 	return val >> 8;
 }
 
-	static inline
+static inline
 uint16_t crc_ccitt_update(uint16_t crc, uint8_t data)
 {
 	data ^= lo8(crc);
@@ -388,7 +425,7 @@ uint16_t crc_ccitt_update(uint16_t crc, uint8_t data)
 			^ ((uint16_t) data << 3));
 }
 
-	static
+static
 uint16_t crc_ccitt(uint16_t crc, const void *in_data, uint64_t len)
 {
 	uint64_t i;
@@ -404,22 +441,25 @@ uint16_t crc_ccitt(uint16_t crc, const void *in_data, uint64_t len)
 #define A(x) (x), sizeof(x)
 #define S(x) ((uint8_t *)x), (sizeof(x) - 1)
 struct crc_test {
-	ull poly,
-	    init,
-	    out;
+	/* Each bit represents a x^n (where n is  */
+	ull poly;
+	int8_t poly_bits;
+	ull init;
+	bool extend;
+	ull out;
 	uint8_t *msg;
 	size_t msg_len;
 } crc_test[] = {
 	/* from "crcspeed" */
-	{ 0x1021,      0, 0x31c3, S("123456789") },
+	{ 0x1021, 16,      0, false, 0x31c3, S("123456789") },
 
 	/* from http://srecord.sourceforge.net/crc16-ccitt.html */
-	{ 0x1021, 0xffff, 0xE5CC, S("123456789") },
-	{ 0x1021, 0xffff, 0x1D0F, NULL, 0 },
-	{ 0x1021, 0xffff, 0x9479, S("A") },
+	{ 0x1021, 16, 0xffff, true,  0xE5CC, S("123456789") },
+	{ 0x1021, 16, 0xffff, true,  0x1D0F, S("") },
+	{ 0x1021, 16, 0xffff, true,  0x9479, S("A") },
 };
-#define CRC_TEST_FMT "0x%04llx 0x%04llx 0x%04llx %*s"
-#define CRC_TEST_EXP(a) (a).poly, (a).init, (a).out, (int)(a).msg_len, (a).msg
+#define CRC_TEST_FMT "0x%04llx 0x%04llx %d 0x%04llx \"%*s\""
+#define CRC_TEST_EXP(a) (a).poly, (a).init, (a).extend, (a).out, (int)(a).msg_len, (a).msg
 
 #define CRC_TEST(test, calc, name) ok((test)->out == calc, "0x%04llx != 0x%04llx :: " CRC_TEST_FMT " :: " #name, (ull)calc, (test)->out, CRC_TEST_EXP(*(test)))
 
@@ -452,17 +492,21 @@ int main(int argc, char **argv)
 	test_eq_xp(LP(403, 0xf), poly_div_shift_numer(0x35b0, (0x12 << 1) | 1));
 	test_eq_x(poly_undiv_(LP(403, 0xf), (0x12 << 1) | 1), 0x35b0);
 
-
 	size_t i;
 	for (i = 0; i < ARRAY_SIZE(crc_test); i++) {
 		struct crc_test *t = crc_test + i;
-		CRC_TEST(t, crc_update_simple_bytes(t->init, t->poly, fls(t->poly), t->msg, t->msg_len, false), crc_update_simple_bytes);
+		CRC_TEST(t, crc_update_simple_bytes(t->init, t->poly, t->poly_bits, t->msg, t->msg_len, false), crc_update_simple_bytes);
 	}
 
 	for (i = 0; i < ARRAY_SIZE(crc_test); i++) {
 		struct crc_test *t = crc_test + i;
-		if (t->poly == 0x1021)
+		if (t->poly == 0x1021 && t->poly_bits == 16)
 			CRC_TEST(t, crc_ccitt(t->init, t->msg, t->msg_len), crc_ccitt);
+	}
+
+	for (i = 0; i < ARRAY_SIZE(crc_test); i++) {
+		struct crc_test *t = crc_test + i;
+		CRC_TEST(t, crc_bytes(t->poly, t->poly_bits, t->init, t->msg, t->msg_len, t->extend), crc_bytes);
 	}
 
 	test_done();

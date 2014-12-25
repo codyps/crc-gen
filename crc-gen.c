@@ -12,6 +12,7 @@
 #include <penny/print.h>
 #include <penny/test.h>
 
+#include <ccan/array_size/array_size.h>
 #include <ccan/darray/darray.h>
 
 #include "printf-ext.h"
@@ -213,7 +214,8 @@ static void bit_seq_xor(struct bit_seq a, struct bit_seq b)
  * through.
  */
 static llu crc_update_simple(llu msg, int8_t msg_bits,
-		llu rem, llu poly, int8_t poly_bits)
+		llu rem, llu poly, int8_t poly_bits,
+		bool lsb_first)
 {
 	/* Load the register with zero bits. */
 	llu reg = rem;
@@ -222,15 +224,27 @@ static llu crc_update_simple(llu msg, int8_t msg_bits,
 	llu reg_mask = (1 << (poly_bits - 1)) - 1;
 	llu reg_bit_mask = 1 << (poly_bits - 2);
 
-	/* While (more message bits)
-	 * (the "--poly_bits" serves to extend the message by W bits) */
-	while(msg_bits || (--poly_bits)) {
+	/* While (more message bits) */
+	while (msg_bits) {
 		bool bit = !!(reg & reg_bit_mask);
 		reg <<= 1;
-		reg |= !!(msg & msg_bit_mask);
 
-		msg_bits --;
-		msg_bit_mask >>= 1;
+		reg |= !!(msg & msg_bit_mask);
+		if (lsb_first)
+		    msg_bit_mask >>= 1;
+		else
+		    msg_bit_mask <<= 1;
+		msg_bits--;
+
+		/* if a 1 bit poped out, xor reg with poly */
+		if (bit)
+			reg ^= poly;
+	}
+
+	/* Extend by W zero bits */
+	while (--poly_bits) {
+		bool bit = !!(reg & reg_bit_mask);
+		reg <<= 1;
 
 		/* if a 1 bit poped out, xor reg with poly */
 		if (bit)
@@ -242,11 +256,12 @@ static llu crc_update_simple(llu msg, int8_t msg_bits,
 }
 
 static llu crc_update_simple_bytes(llu crc, llu poly, llu poly_bits,
-		uint8_t *msg, size_t msg_bytes)
+		uint8_t *msg, size_t msg_bytes,
+		bool lsb_first)
 {
 	size_t i;
 	for (i = 0; i < msg_bytes; i++)
-		crc = crc_update_simple(msg[i], 8, crc, poly, poly_bits);
+		crc = crc_update_simple(msg[i], 8, crc, poly, poly_bits, lsb_first);
 	return crc;
 }
 
@@ -351,8 +366,59 @@ static struct llu_pair poly_div(llu numerator, llu denominator)
 	}
 }
 
+static inline
+uint8_t lo8(uint16_t val)
+{
+	return val & 0xff;
+}
+
+static inline
+uint8_t hi8(uint16_t val)
+{
+	return val >> 8;
+}
+
+	static inline
+uint16_t crc_ccitt_update(uint16_t crc, uint8_t data)
+{
+	data ^= lo8(crc);
+	data ^= data << 4;
+
+	return ((((uint16_t) data << 8) | hi8(crc)) ^ (uint8_t) (data >> 4)
+			^ ((uint16_t) data << 3));
+}
+
+	static
+uint16_t crc_ccitt(uint16_t crc, const void *in_data, uint64_t len)
+{
+	uint64_t i;
+	for (i = 0; i < len; i++) {
+		crc = crc_ccitt_update(crc, ((uint8_t *)in_data)[i]);
+	}
+	crc = crc_ccitt_update(crc, 0);
+	crc = crc_ccitt_update(crc, 0);
+
+	return crc;
+}
+
 #define A(x) (x), sizeof(x)
 #define S(x) ((uint8_t *)x), (sizeof(x) - 1)
+struct crc_test {
+	ull poly,
+	    init,
+	    out;
+	uint8_t *msg;
+	size_t msg_len;
+} crc_test[] = {
+	/* from "crcspeed" */
+	{ 0x1021,      0, 0x31c3, S("123456789") },
+
+	/* from http://srecord.sourceforge.net/crc16-ccitt.html */
+	{ 0x1021, 0xffff, 0xE5CC, S("123456789") },
+	{ 0x1021, 0xffff, 0xE5CC, S("123456789") },
+	{ 0x1021, 0xffff, 0x1D0F, NULL, 0 },
+	{ 0x1021, 0xffff, 0x9479, S("A") },
+};
 
 int main(int argc, char **argv)
 {
@@ -378,16 +444,24 @@ int main(int argc, char **argv)
 	test_eq_x(4, fls(0xf));
 	test_eq_xp(LP(778, 14), poly_div(0x35b0, 0x13));
 	test_eq_xp(LP(0, 0x10), poly_div(0x10, 0x10 << 1));
-	test_eq_x(14u, crc_update_simple(0x35b, fls(0x35b), 0, 0x13, fls(0x13)));
+	test_eq_x(14u, crc_update_simple(0x35b, fls(0x35b), 0, 0x13, fls(0x13), true));
 	test_eq_xp(LP(778, 14), poly_div_shift_numer(0x35b0, 0x13));
 	test_eq_xp(LP(403, 0xf), poly_div_shift_numer(0x35b0, (0x12 << 1) | 1));
 	test_eq_x(poly_undiv_(LP(403, 0xf), (0x12 << 1) | 1), 0x35b0);
 
-	/* from "crcspeed" */
-	test_eq_x(0x31c3, crc_update_simple_bytes(0,      0x1021, fls(0x1021), S("123456789")));
 
-	/* from http://srecord.sourceforge.net/crc16-ccitt.html */
-	test_eq_x(0xE5CC, crc_update_simple_bytes(0xFFFF, 0x1021, fls(0x1021), S("123456789")));
+	size_t i;
+	for (i = 0; i < ARRAY_SIZE(crc_test); i++) {
+		struct crc_test *t = crc_test + i;
+		test_eq_x(t->out, crc_update_simple_bytes(t->init, t->poly, fls(t->poly), t->msg, t->msg_len, false));
+	}
+
+	for (i = 0; i < ARRAY_SIZE(crc_test); i++) {
+		struct crc_test *t = crc_test + i;
+		if (t->poly == 0x1021)
+			test_eq_x(t->out, crc_ccitt(t->init, t->msg, t->msg_len));
+	}
+
 	test_done();
 
 	return 0;

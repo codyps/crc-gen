@@ -426,14 +426,17 @@ uint16_t crc_ccitt_update(uint16_t crc, uint8_t data)
 }
 
 static
-uint16_t crc_ccitt(uint16_t crc, const void *in_data, uint64_t len)
+uint16_t crc_ccitt(uint16_t crc, const void *in_data, uint64_t len, bool augment)
 {
 	uint64_t i;
 	for (i = 0; i < len; i++) {
 		crc = crc_ccitt_update(crc, ((uint8_t *)in_data)[i]);
 	}
-	crc = crc_ccitt_update(crc, 0);
-	crc = crc_ccitt_update(crc, 0);
+
+	if (augment) {
+		crc = crc_ccitt_update(crc, 0);
+		crc = crc_ccitt_update(crc, 0);
+	}
 
 	return crc;
 }
@@ -445,7 +448,7 @@ struct crc_test {
 	ull poly;
 	int8_t poly_bits;
 	ull init;
-	bool extend;
+	bool augment;
 	ull out;
 	uint8_t *msg;
 	size_t msg_len;
@@ -459,7 +462,7 @@ struct crc_test {
 	{ 0x1021, 16, 0xffff, true,  0x9479, S("A") },
 };
 #define CRC_TEST_FMT "0x%04llx 0x%04llx %d 0x%04llx \"%*s\""
-#define CRC_TEST_EXP(a) (a).poly, (a).init, (a).extend, (a).out, (int)(a).msg_len, (a).msg
+#define CRC_TEST_EXP(a) (a).poly, (a).init, (a).augment, (a).out, (int)(a).msg_len, (a).msg
 
 #define CRC_TEST(test, calc, name) ok((test)->out == calc, "0x%04llx != 0x%04llx :: " CRC_TEST_FMT " :: " #name, (ull)calc, (test)->out, CRC_TEST_EXP(*(test)))
 
@@ -501,12 +504,12 @@ int main(int argc, char **argv)
 	for (i = 0; i < ARRAY_SIZE(crc_test); i++) {
 		struct crc_test *t = crc_test + i;
 		if (t->poly == 0x1021 && t->poly_bits == 16)
-			CRC_TEST(t, crc_ccitt(t->init, t->msg, t->msg_len), crc_ccitt);
+			CRC_TEST(t, crc_ccitt(t->init, t->msg, t->msg_len, t->augment), crc_ccitt);
 	}
 
 	for (i = 0; i < ARRAY_SIZE(crc_test); i++) {
 		struct crc_test *t = crc_test + i;
-		CRC_TEST(t, crc_bytes(t->poly, t->poly_bits, t->init, t->msg, t->msg_len, t->extend), crc_bytes);
+		CRC_TEST(t, crc_bytes(t->poly, t->poly_bits, t->init, t->msg, t->msg_len, t->augment), crc_bytes);
 	}
 
 	test_done();

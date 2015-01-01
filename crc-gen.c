@@ -474,12 +474,11 @@ uint16_t crc_ccitt_update(uint16_t crc, uint8_t data)
 }
 
 static
-uint16_t crc_ccitt(uint16_t crc, const void *in_data, uint64_t len, bool augment)
+uint16_t crc_ccitt(uint16_t crc, const void *in_data, size_t len, bool augment)
 {
-	uint64_t i;
-	for (i = 0; i < len; i++) {
+	size_t i;
+	for (i = 0; i < len; i++)
 		crc = crc_ccitt_update(crc, ((uint8_t *)in_data)[i]);
-	}
 
 	if (augment) {
 		crc = crc_ccitt_update(crc, 0);
@@ -498,13 +497,13 @@ struct crc_test {
 	int8_t poly_bits;
 	ull init;
 	bool augment;
-	bool reflect_in;
+	bool in_lsb_first;
 	ull out;
 	uint8_t *msg;
 	size_t msg_len;
 } crc_test[] = {
 	/* poly   poly_bits   augment
-	 * |	  |   init    |      reflect_in
+	 * |	  |   init    |      in_lsb_first
 	 * |      |   |       |      |      out     msg
 	 * |      |   |       |      |      |       |
 	 */
@@ -518,13 +517,13 @@ struct crc_test {
 	{ 0x1021, 16, 0xffff, true,  false, 0x9479, S("A") },
 
 	/* http://www.boost.org/doc/libs/1_41_0/libs/crc/test/crc_test.cpp */
-	/* NOTE: boost identifies this as crc-ccitt, but the srecord
+	/* NOTE: boost identifies this as 'crc-ccitt', but the srecord
 	 * crc16-ccitt doc indicates this is wrong due to the lack of
 	 * augmentation */
 	{ 0x1021, 16, 0xffff, false,  false, 0x29B1, S("123456789") },
 };
-#define CRC_TEST_FMT "0x%04llx 0x%04llx %d 0x%04llx \"%*s\""
-#define CRC_TEST_EXP(a) (a).poly, (a).init, (a).augment, (a).out, (int)(a).msg_len, (a).msg
+#define CRC_TEST_FMT "0x%04llx 0x%04llx %d %d 0x%04llx \"%*s\""
+#define CRC_TEST_EXP(a) (a).poly, (a).init, (a).augment, (a).in_lsb_first, (a).out, (int)(a).msg_len, (a).msg
 
 #define CRC_TEST(test, calc, name) ok((test)->out == calc, "0x%04llx != 0x%04llx :: " CRC_TEST_FMT " :: " #name, (ull)calc, (test)->out, CRC_TEST_EXP(*(test)))
 
@@ -560,7 +559,7 @@ int main(int argc, char **argv)
 	size_t i;
 	for (i = 0; i < ARRAY_SIZE(crc_test); i++) {
 		struct crc_test *t = crc_test + i;
-		CRC_TEST(t, crc_update_simple_bytes(t->init, t->poly, t->poly_bits, t->msg, t->msg_len, true, t->augment), crc_update_simple_bytes);
+		CRC_TEST(t, crc_update_simple_bytes(t->init, t->poly, t->poly_bits, t->msg, t->msg_len, t->in_lsb_first, t->augment), crc_update_simple_bytes);
 	}
 
 	for (i = 0; i < ARRAY_SIZE(crc_test); i++) {

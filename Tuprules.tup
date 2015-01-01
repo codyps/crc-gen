@@ -1,13 +1,23 @@
 CC=gcc
 
-WARN_CFLAGS = -Wall -Wextra
-CFLAGS   += $(WARN_CFLAGS)
+WARN_CFLAGS = -Wall -Wextra -Wno-missing-field-initializers -Wundef -Wshadow -Wcast-align -Wwrite-strings
+
+# C only flags that just turn on some warnings
+C_CFLAGS = $(COMMON_CFLAGS)
+C_CFLAGS += -Wstrict-prototypes
+C_CFLAGS += -Wmissing-prototypes
+C_CFLAGS += -Wold-style-definition
+C_CFLAGS += -Wmissing-declarations
+C_CFLAGS += -Wundef
+C_CFLAGS += -Wbad-function-cast
+
+CFLAGS   += $(WARN_CFLAGS) $(C_CFLAGS)
 CXXFLAGS += $(CFLAGS)
 
-ALL_CFLAGS   += $(CFLAGS)
+ALL_CFLAGS   += $(CFLAGS) -I. -Iccan -std=gnu99
 ALL_CXXFLAGS += $(CXXFLAGS)
 
 !cc =       |> ^ CC    %f^$(CC)  $(ALL_CFLAGS)     $(CFLAGS-%o) -c %f -o %o   |> %B.o
-!cc-link =  |> ^ CCLD  %f^$(CC)  $(ALL_CLDFLAGS)   $(LDFLAGS-%o) -o %o        |>
+!cc-link =  |> ^ CCLD  %f^$(CC)  $(ALL_CLDFLAGS)   $(LDFLAGS-%o) -o %o %f     |>
 !cxx =      |> ^ CXX   %f^$(CXX) $(ALL_CXXFLAGS)   $(CXXFLAGS-%o) -c %f -o %o |> %B.o
-!cxx-link = |> ^ CXXLD %f^$(CXX) $(ALL_CXXLDFLAGS) $(LDFLAGS-%o) %o           |>
+!cxx-link = |> ^ CXXLD %f^$(CXX) $(ALL_CXXLDFLAGS) $(LDFLAGS-%o) %o %f        |>

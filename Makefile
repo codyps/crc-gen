@@ -4,6 +4,7 @@ ALL_CFLAGS += -I. -Iccan
 obj-crc-gen = crc-gen.o printf-ext.o
 
 all::
+
 ccan/config.h: ccan/tools/configurator/configurator
 	$^ > $@
 

@@ -1,6 +1,11 @@
 include_rules
 
 #CC=gcc
+CONFIGURATOR=./ccan/tools/configurator/configurator
+
+: $(CONFIGURATOR).c |> !cc |> $(CONFIGURATOR).o
+: $(CONFIGURATOR).o |> !cc-link |> $(CONFIGURATOR)
+: $(CONFIGURATOR) |> $(CONFIGURATOR) > %o |> ccan/config.h
 
 : foreach *.c | *.h ccan/config.h |> !cc |>
 : *.o |> !cc-link |> crc-gen

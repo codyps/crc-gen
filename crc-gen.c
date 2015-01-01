@@ -290,7 +290,9 @@ static llu crc_update_simple(llu msg, int8_t msg_bits,
 	/* Load the register with zero bits. */
 	llu reg = rem;
 
-	llu msg_bit_mask = 1 << (msg_bits - 1);
+	llu msg_bit_mask = lsb_first
+			? 1
+			: 1 << (msg_bits - 1);
 	llu reg_mask = (1 << (poly_bits - 1)) - 1;
 	llu reg_bit_mask = 1 << (poly_bits - 2);
 
@@ -301,9 +303,9 @@ static llu crc_update_simple(llu msg, int8_t msg_bits,
 
 		reg |= !!(msg & msg_bit_mask);
 		if (lsb_first)
-		    msg_bit_mask >>= 1;
-		else
 		    msg_bit_mask <<= 1;
+		else
+		    msg_bit_mask >>= 1;
 		msg_bits--;
 
 		/* if a 1 bit poped out, xor reg with poly */
@@ -449,6 +451,14 @@ uint8_t hi8(uint16_t val)
 	return val >> 8;
 }
 
+/* From avr-libc.
+ * They distiguish this from crc-xmodem (same poly) by stating:
+ *
+ * Although the CCITT polynomial is the same as that used by the Xmodem
+ * protocol, they are quite different. The difference is in how the bits are
+ * shifted through the alorgithm. Xmodem shifts the MSB of the CRC and the
+ * input first, while CCITT shifts the LSB of the CRC and the input first.
+ */
 static inline
 uint16_t crc_ccitt_update(uint16_t crc, uint8_t data)
 {
@@ -478,7 +488,8 @@ uint16_t crc_ccitt(uint16_t crc, const void *in_data, uint64_t len, bool augment
 #define A(x) (x), sizeof(x)
 #define S(x) ((uint8_t *)x), (sizeof(x) - 1)
 struct crc_test {
-	/* Each bit represents a x^n (where n is  */
+	/* Each bit represents a x^n. Where n = poly_bits, x^n is assumed to
+	 * be included */
 	ull poly;
 	int8_t poly_bits;
 	ull init;
@@ -494,6 +505,8 @@ struct crc_test {
 	{ 0x1021, 16, 0xffff, true,  0xE5CC, S("123456789") },
 	{ 0x1021, 16, 0xffff, true,  0x1D0F, S("") },
 	{ 0x1021, 16, 0xffff, true,  0x9479, S("A") },
+
+	/* */
 };
 #define CRC_TEST_FMT "0x%04llx 0x%04llx %d 0x%04llx \"%*s\""
 #define CRC_TEST_EXP(a) (a).poly, (a).init, (a).augment, (a).out, (int)(a).msg_len, (a).msg
@@ -524,7 +537,7 @@ int main(int argc, char **argv)
 	test_eq_x(4, fls(0xf));
 	test_eq_xp(LP(778, 14), poly_div(0x35b0, 0x13));
 	test_eq_xp(LP(0, 0x10), poly_div(0x10, 0x10 << 1));
-	test_eq_x(14u, crc_update_simple(0x35b, fls(0x35b), 0, 0x13, fls(0x13), true));
+	test_eq_x(14u, crc_update_simple(0x35b, fls(0x35b), 0, 0x13, fls(0x13), false));
 	test_eq_xp(LP(778, 14), poly_div_shift_numer(0x35b0, 0x13));
 	test_eq_xp(LP(403, 0xf), poly_div_shift_numer(0x35b0, (0x12 << 1) | 1));
 	test_eq_x(poly_undiv_(LP(403, 0xf), (0x12 << 1) | 1), 0x35b0);
@@ -532,7 +545,7 @@ int main(int argc, char **argv)
 	size_t i;
 	for (i = 0; i < ARRAY_SIZE(crc_test); i++) {
 		struct crc_test *t = crc_test + i;
-		CRC_TEST(t, crc_update_simple_bytes(t->init, t->poly, t->poly_bits, t->msg, t->msg_len, false, t->augment), crc_update_simple_bytes);
+		CRC_TEST(t, crc_update_simple_bytes(t->init, t->poly, t->poly_bits, t->msg, t->msg_len, true, t->augment), crc_update_simple_bytes);
 	}
 
 	for (i = 0; i < ARRAY_SIZE(crc_test); i++) {

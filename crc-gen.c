@@ -222,13 +222,17 @@ ull crc_bytes(ull poly, int8_t poly_bits, ull crc, const void *in_data, size_t l
 		}
 	}
 
-	if (augment)
-		for (int j = 0; j < poly_bits; j++) {
-			if (crc & high_bit)
-				crc = (crc << 1) ^ poly;
-			else
-				crc <<= 1;
+	if (augment) {
+		for (size_t i = 0; i < (poly_bits / 8); i++) {
+			crc ^= (0 << 8);
+			for (int j = 0; j < 8; j++) {
+				if (crc & high_bit)
+					crc = (crc << 1) ^ poly;
+				else
+					crc <<= 1;
+			}
 		}
+	}
 	return crc & bit_mask(poly_bits);
 }
 
@@ -494,19 +498,30 @@ struct crc_test {
 	int8_t poly_bits;
 	ull init;
 	bool augment;
+	bool reflect_in;
 	ull out;
 	uint8_t *msg;
 	size_t msg_len;
 } crc_test[] = {
+	/* poly   poly_bits   augment
+	 * |	  |   init    |      reflect_in
+	 * |      |   |       |      |      out     msg
+	 * |      |   |       |      |      |       |
+	 */
+
 	/* from "crcspeed" */
-	{ 0x1021, 16,      0, false, 0x31c3, S("123456789") },
+	{ 0x1021, 16,      0, false, false, 0x31c3, S("123456789") },
 
 	/* from http://srecord.sourceforge.net/crc16-ccitt.html */
-	{ 0x1021, 16, 0xffff, true,  0xE5CC, S("123456789") },
-	{ 0x1021, 16, 0xffff, true,  0x1D0F, S("") },
-	{ 0x1021, 16, 0xffff, true,  0x9479, S("A") },
+	{ 0x1021, 16, 0xffff, true,  false, 0xE5CC, S("123456789") },
+	{ 0x1021, 16, 0xffff, true,  false, 0x1D0F, S("") },
+	{ 0x1021, 16, 0xffff, true,  false, 0x9479, S("A") },
 
-	/* */
+	/* http://www.boost.org/doc/libs/1_41_0/libs/crc/test/crc_test.cpp */
+	/* NOTE: boost identifies this as crc-ccitt, but the srecord
+	 * crc16-ccitt doc indicates this is wrong due to the lack of
+	 * augmentation */
+	{ 0x1021, 16, 0xffff, false,  false, 0x29B1, S("123456789") },
 };
 #define CRC_TEST_FMT "0x%04llx 0x%04llx %d 0x%04llx \"%*s\""
 #define CRC_TEST_EXP(a) (a).poly, (a).init, (a).augment, (a).out, (int)(a).msg_len, (a).msg

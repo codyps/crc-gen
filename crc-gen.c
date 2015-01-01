@@ -250,6 +250,39 @@ ull crc_bytes(ull poly, int8_t poly_bits, ull crc, const void *in_data, size_t l
  * iterates over every single bit, uses an explicit "register" to shift
  * through.
  */
+static llu crc_update_simple_(llu msg, int8_t msg_bits,
+		llu rem, llu poly, int8_t poly_bits,
+		bool lsb_first)
+{
+	/* Load the register with zero bits. */
+	llu reg = rem;
+
+	llu msg_bit_mask = 1 << (msg_bits - 1);
+	llu reg_mask = (1 << (poly_bits - 1)) - 1;
+	llu reg_bit_mask = 1 << (poly_bits - 2);
+
+	/* While (more message bits) */
+	while (msg_bits) {
+		bool bit = !!(reg & reg_bit_mask);
+		reg <<= 1;
+
+		reg |= !!(msg & msg_bit_mask);
+		if (lsb_first)
+		    msg_bit_mask >>= 1;
+		else
+		    msg_bit_mask <<= 1;
+		msg_bits--;
+
+		/* if a 1 bit poped out, xor reg with poly */
+		if (bit)
+			reg ^= poly;
+	}
+
+	reg &= reg_mask;
+	return reg;
+}
+
+/* same as above, but augments */
 static llu crc_update_simple(llu msg, int8_t msg_bits,
 		llu rem, llu poly, int8_t poly_bits,
 		bool lsb_first)
@@ -278,11 +311,9 @@ static llu crc_update_simple(llu msg, int8_t msg_bits,
 			reg ^= poly;
 	}
 
-	/* Extend by W zero bits */
 	while (--poly_bits) {
 		bool bit = !!(reg & reg_bit_mask);
 		reg <<= 1;
-
 		/* if a 1 bit poped out, xor reg with poly */
 		if (bit)
 			reg ^= poly;
@@ -294,11 +325,14 @@ static llu crc_update_simple(llu msg, int8_t msg_bits,
 
 static llu crc_update_simple_bytes(llu crc, llu poly, llu poly_bits,
 		uint8_t *msg, size_t msg_bytes,
-		bool lsb_first)
+		bool lsb_first, bool augment)
 {
 	size_t i;
 	for (i = 0; i < msg_bytes; i++)
-		crc = crc_update_simple(msg[i], 8, crc, poly, poly_bits, lsb_first);
+		crc = crc_update_simple_(msg[i], 8, crc, poly, poly_bits, lsb_first);
+	/* augment */
+	if (augment)
+		crc = crc_update_simple_(0, poly_bits, crc, poly, poly_bits, lsb_first);
 	return crc;
 }
 
@@ -498,7 +532,7 @@ int main(int argc, char **argv)
 	size_t i;
 	for (i = 0; i < ARRAY_SIZE(crc_test); i++) {
 		struct crc_test *t = crc_test + i;
-		CRC_TEST(t, crc_update_simple_bytes(t->init, t->poly, t->poly_bits, t->msg, t->msg_len, false), crc_update_simple_bytes);
+		CRC_TEST(t, crc_update_simple_bytes(t->init, t->poly, t->poly_bits, t->msg, t->msg_len, false, t->augment), crc_update_simple_bytes);
 	}
 
 	for (i = 0; i < ARRAY_SIZE(crc_test); i++) {

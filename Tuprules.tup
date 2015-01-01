@@ -17,7 +17,7 @@ CXXFLAGS += $(CFLAGS)
 ALL_CFLAGS   += $(CFLAGS) -I. -Iccan -std=gnu99
 ALL_CXXFLAGS += $(CXXFLAGS)
 
-!cc =       |> ^ CC    %f^$(CC)  $(ALL_CFLAGS)     $(CFLAGS-%o) -c %f -o %o   |> %B.o
-!cc-link =  |> ^ CCLD  %f^$(CC)  $(ALL_CLDFLAGS)   $(LDFLAGS-%o) -o %o %f     |>
-!cxx =      |> ^ CXX   %f^$(CXX) $(ALL_CXXFLAGS)   $(CXXFLAGS-%o) -c %f -o %o |> %B.o
-!cxx-link = |> ^ CXXLD %f^$(CXX) $(ALL_CXXLDFLAGS) $(LDFLAGS-%o) %o %f        |>
+!cc =       |> ^ CC    %o^$(CC)  $(ALL_CFLAGS)     $(CFLAGS-%o) -c %f -o %o   |> %f.o
+!cc-link =  |> ^ CCLD  %o^$(CC)  $(ALL_CLDFLAGS)   $(LDFLAGS-%o) -o %o %f     |>
+!cxx =      |> ^ CXX   %o^$(CXX) $(ALL_CXXFLAGS)   $(CXXFLAGS-%o) -c %f -o %o |> %f.o
+!cxx-link = |> ^ CXXLD %o^$(CXX) $(ALL_CXXLDFLAGS) $(LDFLAGS-%o) %o %f        |>

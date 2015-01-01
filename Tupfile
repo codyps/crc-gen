@@ -9,4 +9,4 @@ CONFIGURATOR=./ccan/tools/configurator/configurator
 
 : foreach *.c | *.h ccan/config.h |> !cc |>
 : *.o |> !cc-link |> crc-gen
-: crc-gen |> ./%f 0 >%o 2>&1 | cat |> test-log
+: crc-gen |> ./%f 0 | tee %o |> test-log

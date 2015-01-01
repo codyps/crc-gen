@@ -261,9 +261,11 @@ static llu crc_update_simple_(llu msg, int8_t msg_bits,
 	/* Load the register with zero bits. */
 	llu reg = rem;
 
-	llu msg_bit_mask = 1 << (msg_bits - 1);
-	llu reg_mask = (1 << (poly_bits - 1)) - 1;
-	llu reg_bit_mask = 1 << (poly_bits - 2);
+	llu msg_bit_mask = lsb_first
+			? 1
+			: 1 << (msg_bits - 1);
+	llu reg_mask = (1 << (poly_bits)) - 1;
+	llu reg_bit_mask = 1 << (poly_bits - 1);
 
 	/* While (more message bits) */
 	while (msg_bits) {
@@ -272,9 +274,9 @@ static llu crc_update_simple_(llu msg, int8_t msg_bits,
 
 		reg |= !!(msg & msg_bit_mask);
 		if (lsb_first)
-		    msg_bit_mask >>= 1;
-		else
 		    msg_bit_mask <<= 1;
+		else
+		    msg_bit_mask >>= 1;
 		msg_bits--;
 
 		/* if a 1 bit poped out, xor reg with poly */
@@ -286,9 +288,25 @@ static llu crc_update_simple_(llu msg, int8_t msg_bits,
 	return reg;
 }
 
+static llu crc_augment(int8_t bits, llu crc, llu poly)
+{
+	llu reg_mask = (1 << (bits)) - 1;
+	llu reg_bit_mask = 1 << (bits - 1);
+	while (--bits) {
+		bool bit = !!(crc & reg_bit_mask);
+		crc <<= 1;
+		/* if a 1 bit poped out, xor reg with poly */
+		if (bit)
+			crc ^= poly;
+	}
+
+	crc &= reg_mask;
+	return crc;
+}
+
 /* same as above, but augments */
 static llu crc_update_simple(llu msg, int8_t msg_bits,
-		llu rem, llu poly, int8_t poly_bits,
+		llu rem, llu poly, int8_t bits,
 		bool lsb_first)
 {
 	/* Load the register with zero bits. */
@@ -297,8 +315,8 @@ static llu crc_update_simple(llu msg, int8_t msg_bits,
 	llu msg_bit_mask = lsb_first
 			? 1
 			: 1 << (msg_bits - 1);
-	llu reg_mask = (1 << (poly_bits - 1)) - 1;
-	llu reg_bit_mask = 1 << (poly_bits - 2);
+	llu reg_mask = (1 << (bits)) - 1;
+	llu reg_bit_mask = 1 << (bits - 1);
 
 	/* While (more message bits) */
 	while (msg_bits) {
@@ -317,7 +335,7 @@ static llu crc_update_simple(llu msg, int8_t msg_bits,
 			reg ^= poly;
 	}
 
-	while (--poly_bits) {
+	while (--bits) {
 		bool bit = !!(reg & reg_bit_mask);
 		reg <<= 1;
 		/* if a 1 bit poped out, xor reg with poly */

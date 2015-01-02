@@ -12,6 +12,7 @@
 #include <penny/print.h>
 #include <penny/test.h>
 #include <penny/type_info.h>
+#include <penny/bits.h>
 
 #include <ccan/array_size/array_size.h>
 #include <ccan/darray/darray.h>
@@ -302,7 +303,7 @@ static llu crc_update_simple(llu msg, int8_t msg_bits,
 		llu rem, llu poly, int8_t bits,
 		bool lsb_first)
 {
-	assert(msg_bits < max_of_u(msg));
+	assert((size_t)msg_bits < max_of_u(msg));
 	/* Load the register with zero bits. */
 	llu reg = rem;
 
@@ -490,7 +491,7 @@ uint16_t crc_ccitt(uint16_t crc, const void *in_data, size_t len, bool augment)
 {
 	size_t i;
 	for (i = 0; i < len; i++)
-		crc = crc_ccitt_update(crc, ((uint8_t *)in_data)[i]);
+		crc = crc_ccitt_update(crc, reverse_bits(((uint8_t *)in_data)[i]));
 
 	if (augment) {
 		crc = crc_ccitt_update(crc, 0);

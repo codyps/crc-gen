@@ -255,7 +255,7 @@ static llu crc_update_simple_(llu msg, int8_t msg_bits,
 	llu reg = rem;
 	llu msg_bit_mask = lsb_first
 			? 1
-			: INTMAX_C(1) << msg_bits;
+			: 1LLU << (msg_bits - 1);
 	llu reg_mask = bit_mask(poly_bits);
 	llu reg_bit_mask = 1 << (poly_bits - 1);
 

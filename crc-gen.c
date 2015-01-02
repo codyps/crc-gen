@@ -487,17 +487,23 @@ uint16_t crc_ccitt_update(uint16_t crc, uint8_t data)
 }
 
 static
-uint16_t crc_ccitt(uint16_t crc, const void *in_data, size_t len, bool augment)
+uint16_t crc_ccitt(uint16_t crc, const void *in_data, size_t len, bool augment, bool in_lsb_first)
 {
 	size_t i;
-	for (i = 0; i < len; i++)
-		crc = crc_ccitt_update(crc, ((uint8_t *)in_data)[i]);
+	for (i = 0; i < len; i++) {
+		uint8_t b = ((uint8_t *)in_data)[i];
+		if (!in_lsb_first)
+		       b = reverse_bits(b);
+		crc = crc_ccitt_update(crc, b);
+	}
 
 	if (augment) {
 		crc = crc_ccitt_update(crc, 0);
 		crc = crc_ccitt_update(crc, 0);
 	}
 
+	if (!in_lsb_first)
+		crc = reverse_bits(crc);
 	return crc;
 }
 
@@ -578,7 +584,7 @@ int main(int argc, char **argv)
 	for (i = 0; i < ARRAY_SIZE(crc_test); i++) {
 		struct crc_test *t = crc_test + i;
 		if (t->poly == 0x1021 && t->poly_bits == 16)
-			CRC_TEST(t, crc_ccitt(t->init, t->msg, t->msg_len, t->augment), crc_ccitt);
+			CRC_TEST(t, crc_ccitt(t->init, t->msg, t->msg_len, t->augment, t->in_lsb_first), crc_ccitt);
 	}
 
 	for (i = 0; i < ARRAY_SIZE(crc_test); i++) {

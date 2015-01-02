@@ -1,7 +1,7 @@
-TARGETS = crc-gen
+TARGET_BIN = crc-gen
 
 ALL_CFLAGS += -I. -Iccan
-obj-crc-gen = crc-gen.o printf-ext.o
+obj-crc-gen = crc-gen.c.o printf-ext.c.o
 
 all::
 

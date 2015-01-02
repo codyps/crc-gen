@@ -299,8 +299,8 @@ static llu crc_augment(int8_t bits, llu crc, llu poly)
 #endif
 
 /* same as above, but augments */
-static llu crc_update_simple(llu msg, int8_t msg_bits,
-		llu rem, llu poly, int8_t bits,
+static llu crc_update_simple(llu msg, uint8_t msg_bits,
+		llu rem, llu poly, uint8_t bits,
 		bool lsb_first)
 {
 	assert((size_t)msg_bits < max_of_u(msg));

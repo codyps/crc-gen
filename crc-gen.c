@@ -11,6 +11,7 @@
 #include <penny/penny.h>
 #include <penny/print.h>
 #include <penny/test.h>
+#include <penny/type_info.h>
 
 #include <ccan/array_size/array_size.h>
 #include <ccan/darray/darray.h>
@@ -112,7 +113,6 @@ struct num_bit {
 	struct num *num;
 	llu bit_idx;
 };
-#define BITS_MAX(_t) (CHAR_BIT * sizeof(_t))
 struct num {
 	enum num_type nt;
 	llu val;
@@ -195,14 +195,6 @@ static void bit_seq_xor(struct bit_seq a, struct bit_seq b)
 }
 #endif
 
-/* assert(bits > 0) */
-#define bit_mask_nz(bits) ((UINTMAX_C(1) << ((bits) - 1) << 1) - 1)
-
-static inline uintmax_t bit_mask(unsigned bits)
-{
-	return bits ? bit_mask_nz(bits) : 0;
-}
-
 /*
  * Based on crc16 from https://github.com/mattsta/crcspeed.git
  */
@@ -223,7 +215,7 @@ ull crc_bytes(ull poly, int8_t poly_bits, ull crc, const void *in_data, size_t l
 	}
 
 	if (augment) {
-		for (size_t i = 0; i < (poly_bits / 8); i++) {
+		for (size_t i = 0; i < ((size_t)poly_bits / 8); i++) {
 			crc ^= (0 << 8);
 			for (int j = 0; j < 8; j++) {
 				if (crc & high_bit)
@@ -260,11 +252,10 @@ static llu crc_update_simple_(llu msg, int8_t msg_bits,
 {
 	/* Load the register with zero bits. */
 	llu reg = rem;
-
 	llu msg_bit_mask = lsb_first
 			? 1
-			: 1 << (msg_bits - 1);
-	llu reg_mask = (1 << (poly_bits)) - 1;
+			: INTMAX_C(1) << msg_bits;
+	llu reg_mask = bit_mask(poly_bits);
 	llu reg_bit_mask = 1 << (poly_bits - 1);
 
 	/* While (more message bits) */
@@ -288,6 +279,7 @@ static llu crc_update_simple_(llu msg, int8_t msg_bits,
 	return reg;
 }
 
+#if 0
 static llu crc_augment(int8_t bits, llu crc, llu poly)
 {
 	llu reg_mask = (1 << (bits)) - 1;
@@ -303,20 +295,22 @@ static llu crc_augment(int8_t bits, llu crc, llu poly)
 	crc &= reg_mask;
 	return crc;
 }
+#endif
 
 /* same as above, but augments */
 static llu crc_update_simple(llu msg, int8_t msg_bits,
 		llu rem, llu poly, int8_t bits,
 		bool lsb_first)
 {
+	assert(msg_bits < max_of_u(msg));
 	/* Load the register with zero bits. */
 	llu reg = rem;
 
 	llu msg_bit_mask = lsb_first
 			? 1
-			: 1 << (msg_bits - 1);
-	llu reg_mask = (1 << (bits)) - 1;
-	llu reg_bit_mask = 1 << (bits - 1);
+			: 1LLU << (msg_bits - 1);
+	llu reg_mask = bit_mask(bits);
+	llu reg_bit_mask = 1LLU << (bits - 1);
 
 	/* While (more message bits) */
 	while (msg_bits) {
@@ -381,7 +375,7 @@ static llu poly_undiv_(struct llu_pair p, llu m)
 /* like the below poly_div(), but instead of shifting the denominator down,
  * shift the numerator up */
 static struct llu_pair poly_div_shift_numer_(llu numerator, int8_t numer_bits,
-		llu denominator, int8_t denom_bits, llu rem)
+		llu denominator, int8_t denom_bits)
 {
 	assert(numer_bits);
 	assert(numer_bits <= 64);
@@ -419,7 +413,7 @@ static struct llu_pair poly_div_shift_numer_(llu numerator, int8_t numer_bits,
 static struct llu_pair poly_div_shift_numer(llu numerator, llu denominator)
 {
 	assert(numerator);
-	return poly_div_shift_numer_(numerator, fls_nz(numerator), denominator, fls(denominator), 0);
+	return poly_div_shift_numer_(numerator, fls_nz(numerator), denominator, fls(denominator));
 }
 
 /* use fls() and shift the denominator along to perform polynomial division.

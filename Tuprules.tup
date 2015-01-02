@@ -1,4 +1,5 @@
-CC=gcc
+include Tupconfig.tup
+CC ?= cc
 
 WARN_CFLAGS = -Wall -Wextra -Wno-missing-field-initializers -Wundef -Wshadow -Wcast-align -Wwrite-strings
 

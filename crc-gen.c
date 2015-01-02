@@ -491,7 +491,7 @@ uint16_t crc_ccitt(uint16_t crc, const void *in_data, size_t len, bool augment)
 {
 	size_t i;
 	for (i = 0; i < len; i++)
-		crc = crc_ccitt_update(crc, reverse_bits(((uint8_t *)in_data)[i]));
+		crc = crc_ccitt_update(crc, ((uint8_t *)in_data)[i]);
 
 	if (augment) {
 		crc = crc_ccitt_update(crc, 0);

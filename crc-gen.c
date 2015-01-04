@@ -251,6 +251,8 @@ static llu crc_update_simple_(llu msg, int8_t msg_bits,
 		llu rem, llu poly, int8_t poly_bits,
 		bool lsb_first)
 {
+	assert(poly_bits < BITS_IN(llu));
+	assert(poly_bits);
 	/* Load the register with zero bits. */
 	llu reg = rem;
 	llu msg_bit_mask = lsb_first
@@ -303,7 +305,8 @@ static llu crc_update_simple(llu msg, uint8_t msg_bits,
 		llu rem, llu poly, uint8_t bits,
 		bool lsb_first)
 {
-	assert((size_t)msg_bits < max_of_u(msg));
+	assert(msg_bits < BITS_IN(msg));
+	assert(bits);
 	/* Load the register with zero bits. */
 	llu reg = rem;
 

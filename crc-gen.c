@@ -543,6 +543,13 @@ struct crc_test {
 	 * crc16-ccitt doc indicates this is wrong due to the lack of
 	 * augmentation */
 	{ 0x1021, 16, 0xffff, false,  false, 0x29B1, S("123456789") },
+
+#if 0
+	/* xmodem from http://www.lammertbies.nl/comm/info/crc-calculation.html */
+	{ 0x1021, 16,      0, false,  true, 0x31c3, S("123456789") },
+	{ 0x1021, 16,      0, false,  true, 0x58E5, S("A") },
+	{ 0x1021, 16,      0, false,  true, 0x2672, S("1") },
+#endif
 };
 #define CRC_TEST_FMT "0x%04llx 0x%04llx %d %d 0x%04llx \"%*s\""
 #define CRC_TEST_EXP(a) (a).poly, (a).init, (a).augment, (a).in_lsb_first, (a).out, (int)(a).msg_len, (a).msg

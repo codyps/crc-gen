@@ -510,6 +510,31 @@ uint16_t crc_ccitt(uint16_t crc, const void *in_data, size_t len, bool augment, 
 	return crc;
 }
 
+/*
+ * http://wiki.synchro.net/ref:xmodem
+ *
+ * This function calculates the CRC used by the XMODEM/CRC Protocol
+ * The first argument is a pointer to the message block.
+ * The second argument is the number of bytes in the message block.
+ * The function returns an integer which contains the CRC.
+ * The low order 16 bits are the coefficients of the CRC.
+ */
+int crc_xmodem(char *ptr, int count)
+{
+	int crc, i;
+
+	crc = 0;
+	while (--count >= 0) {
+		crc = crc ^ (int)*ptr++ << 8;
+		for (i = 0; i < 8; ++i)
+			if (crc & 0x8000)
+				crc = crc << 1 ^ 0x1021;
+			else
+				crc = crc << 1;
+	}
+	return (crc & 0xFFFF);
+}
+
 #define A(x) (x), sizeof(x)
 #define S(x) ((uint8_t *)x), (sizeof(x) - 1)
 struct crc_test {
@@ -544,12 +569,10 @@ struct crc_test {
 	 * augmentation */
 	{ 0x1021, 16, 0xffff, false,  false, 0x29B1, S("123456789") },
 
-#if 0
 	/* xmodem from http://www.lammertbies.nl/comm/info/crc-calculation.html */
 	{ 0x1021, 16,      0, false,  true, 0x31c3, S("123456789") },
 	{ 0x1021, 16,      0, false,  true, 0x58E5, S("A") },
 	{ 0x1021, 16,      0, false,  true, 0x2672, S("1") },
-#endif
 };
 #define CRC_TEST_FMT "0x%04llx 0x%04llx %d %d 0x%04llx \"%*s\""
 #define CRC_TEST_EXP(a) (a).poly, (a).init, (a).augment, (a).in_lsb_first, (a).out, (int)(a).msg_len, (a).msg
@@ -600,6 +623,12 @@ int main(int argc, char **argv)
 	for (i = 0; i < ARRAY_SIZE(crc_test); i++) {
 		struct crc_test *t = crc_test + i;
 		CRC_TEST(t, crc_bytes(t->poly, t->poly_bits, t->init, t->msg, t->msg_len, t->augment), crc_bytes);
+	}
+
+	for (i = 0; i < ARRAY_SIZE(crc_test); i++) {
+		struct crc_test *t = crc_test + i;
+		if (t->poly == 0x1021 && t->poly_bits == 16 && t->init == 0)
+			CRC_TEST(t, crc_xmodem(t->msg, t->msg_len), crc_xmodem);
 	}
 
 	test_done();

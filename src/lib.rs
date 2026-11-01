@@ -23,6 +23,7 @@ use std::fmt::{self, Write};
 
 pub mod catalogue;
 pub mod rating;
+pub mod search;
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum BitOrder {

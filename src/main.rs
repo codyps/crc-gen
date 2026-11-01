@@ -1,7 +1,10 @@
 use crc_gen::{BitOrder, CrcSpec};
 use std::io::{self, Write};
 
+mod search_cli;
+
 const HELP: &str = "Usage: crc-gen [POLYNOMIAL] [OPTIONS]
+       crc-gen search --help
 
 Generate symbolic, table-free CRC streaming update equations.
 
@@ -172,6 +175,9 @@ fn run() -> Result<(), String> {
 }
 
 fn main() -> std::process::ExitCode {
+    if std::env::args().nth(1).as_deref() == Some("search") {
+        return search_cli::main();
+    }
     match run() {
         Ok(()) => std::process::ExitCode::SUCCESS,
         Err(error) => {

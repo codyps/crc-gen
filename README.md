@@ -2,7 +2,11 @@
 
 Generate symbolic CRC update expressions and simplify them into table-free XOR
 equations or standalone Rust code. This Rust implementation replaces the original
-C experiment. It has no submodules.
+C experiment. It has no submodules. The search runner uses bundled SQLite,
+compression, JSON and checksums for durable, resumable results.
+
+See [SEARCH.md](SEARCH.md) for exhaustive CRC-8/16 searches, Koopman CRC-32/64
+catalogues, parallel workers/shards, recovery, and versioned operation ratings.
 
 ```sh
 cargo test

@@ -1,0 +1,155 @@
+/// Portable table-free raw byte-stream update. Masks unused seed bits.
+pub fn crc_update_bytes_scalar(mut crc: u64, bytes: &[u8]) -> u64 {
+    crc &= u64::MAX >> (64 - @WIDTH@);
+    for &byte in bytes {
+        crc = crc_update(crc, byte as u64);
+    }
+    crc
+}
+
+/// Safe runtime dispatch. No CRC initialization/final XOR is performed.
+pub fn crc_update_bytes(crc: u64, bytes: &[u8]) -> u64 {
+    #[cfg(all(target_arch = "aarch64", target_endian = "little"))]
+    if bytes.len() >= 16 && pmull_available() {
+        // SAFETY: CPU/OS feature detection satisfies the intrinsic requirements.
+        return unsafe { crc_update_bytes_pmull(crc, bytes) };
+    }
+    crc_update_bytes_scalar(crc, bytes)
+}
+
+/// Rust's target feature `aes` covers the PMULL intrinsics. Check the separate
+/// runtime PMULL and AES capabilities as well as NEON before entering that code.
+pub fn pmull_available() -> bool {
+    #[cfg(all(target_arch = "aarch64", target_endian = "little"))]
+    {
+        std::arch::is_aarch64_feature_detected!("neon")
+            && std::arch::is_aarch64_feature_detected!("aes")
+            && std::arch::is_aarch64_feature_detected!("pmull")
+    }
+    #[cfg(not(all(target_arch = "aarch64", target_endian = "little")))]
+    {
+        false
+    }
+}
+
+#[cfg(all(target_arch = "aarch64", target_endian = "little"))]
+use core::arch::aarch64::*;
+
+#[cfg(all(target_arch = "aarch64", target_endian = "little"))]
+#[target_feature(enable = "neon")]
+unsafe fn pmull_pair(lo: u64, hi: u64) -> uint64x2_t {
+    vsetq_lane_u64::<1>(hi, vdupq_n_u64(lo))
+}
+
+// Convert a memory block to normal polynomial order, independent of register
+// width. RBIT reverses each input byte for reflected CRCs; REV64 + EXT reverses
+// the 16-byte block. Only complete blocks are loaded, with no alignment demand.
+#[cfg(all(target_arch = "aarch64", target_endian = "little"))]
+#[target_feature(enable = "neon")]
+unsafe fn pmull_load(p: *const u8) -> uint64x2_t {
+    // SAFETY: caller has checked that at least 16 bytes remain.
+    let v = unsafe { vld1q_u8(p) };
+    let v = if @REFLECTED@ {
+        vrbitq_u8(v)
+    } else {
+        v
+    };
+    let v = vrev64q_u8(v);
+    vreinterpretq_u64_u8(vextq_u8::<8>(v, v))
+}
+
+#[cfg(all(target_arch = "aarch64", target_endian = "little"))]
+#[target_feature(enable = "aes,neon")]
+unsafe fn pmull_fold(a: uint64x2_t, b: uint64x2_t, k: uint64x2_t) -> uint64x2_t {
+    let lo = vreinterpretq_u64_p128(vmull_p64(vgetq_lane_u64::<0>(a), vgetq_lane_u64::<0>(k)));
+    let hi = vreinterpretq_u64_p128(vmull_high_p64(
+        vreinterpretq_p64_u64(a),
+        vreinterpretq_p64_u64(k),
+    ));
+    veorq_u64(b, veorq_u64(lo, hi))
+}
+
+#[cfg(all(target_arch = "aarch64", target_endian = "little"))]
+fn pmull_seed(crc: u64) -> u64 {
+    let crc = crc & (u64::MAX >> (64 - @WIDTH@));
+    if @REFLECTED@ {
+        crc.reverse_bits()
+    } else {
+        crc << (64 - @WIDTH@)
+    }
+}
+
+// Same exact reciprocal reduction as PCLMUL, modulo D = G*x^(64-width).
+#[cfg(all(target_arch = "aarch64", target_endian = "little"))]
+#[target_feature(enable = "aes,neon")]
+unsafe fn pmull_finish(a: uint64x2_t) -> u64 {
+    // SAFETY: all helpers require a subset of the target features on this function.
+    unsafe {
+        let zero = vdupq_n_u64(0);
+        let a = pmull_fold(
+            a,
+            zero,
+            pmull_pair(@X64@u64, @X128@u64),
+        );
+        let hi = vextq_u64::<1>(a, zero);
+        let product =
+            vreinterpretq_u64_p128(vmull_p64(vgetq_lane_u64::<0>(hi), @RECIPROCAL@u64));
+        let q = veorq_u64(hi, vextq_u64::<1>(product, zero));
+        let product =
+            vreinterpretq_u64_p128(vmull_p64(vgetq_lane_u64::<0>(q), @POLYNOMIAL@u64));
+        let r = vgetq_lane_u64::<0>(veorq_u64(a, product));
+        if @REFLECTED@ {
+            r.reverse_bits()
+        } else {
+            r >> (64 - @WIDTH@)
+        }
+    }
+}
+
+/// PMULL byte-stream update with four independent 128-bit streams for bulk data.
+/// Inputs shorter than 16 bytes and final tails use the scalar word form.
+/// # Safety
+/// CPU/OS must support NEON, AES and PMULL. Use pmull_available() first, or use
+/// the safe crc_update_bytes dispatcher. Generated hardware code is ARM64 LE only.
+#[cfg(all(target_arch = "aarch64", target_endian = "little"))]
+#[target_feature(enable = "aes,neon")]
+pub unsafe fn crc_update_bytes_pmull(crc: u64, bytes: &[u8]) -> u64 {
+    // SAFETY: target features are required by this entry point. Each load is
+    // guarded by an exact remaining-length check; tails use safe byte accesses.
+    unsafe {
+        if bytes.len() < 16 {
+            return crc_update_bytes_scalar(crc, bytes);
+        }
+        let seed = pmull_pair(0, pmull_seed(crc));
+        let k128 = pmull_pair(@X128@u64, @X192@u64);
+        let mut i;
+        let mut a;
+        if bytes.len() >= 64 {
+            let k512 = pmull_pair(@X512@u64, @X576@u64);
+            let mut a0 = veorq_u64(pmull_load(bytes.as_ptr()), seed);
+            let mut a1 = pmull_load(bytes.as_ptr().add(16));
+            let mut a2 = pmull_load(bytes.as_ptr().add(32));
+            let mut a3 = pmull_load(bytes.as_ptr().add(48));
+            i = 64;
+            while bytes.len() - i >= 64 {
+                a0 = pmull_fold(a0, pmull_load(bytes.as_ptr().add(i)), k512);
+                a1 = pmull_fold(a1, pmull_load(bytes.as_ptr().add(i + 16)), k512);
+                a2 = pmull_fold(a2, pmull_load(bytes.as_ptr().add(i + 32)), k512);
+                a3 = pmull_fold(a3, pmull_load(bytes.as_ptr().add(i + 48)), k512);
+                i += 64;
+            }
+            let k256 = pmull_pair(@X256@u64, @X320@u64);
+            a0 = pmull_fold(a0, a2, k256);
+            a1 = pmull_fold(a1, a3, k256);
+            a = pmull_fold(a0, a1, k128);
+        } else {
+            a = veorq_u64(pmull_load(bytes.as_ptr()), seed);
+            i = 16;
+        }
+        while bytes.len() - i >= 16 {
+            a = pmull_fold(a, pmull_load(bytes.as_ptr().add(i)), k128);
+            i += 16;
+        }
+        crc_update_bytes_scalar(pmull_finish(a), &bytes[i..])
+    }
+}

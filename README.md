@@ -45,6 +45,7 @@ Output formats:
 | `word-rust` | A Rust update using masked words and shared shift/XOR feedback folds |
 | `block-rust` | Byte, 16-byte block, and arbitrary-slice Rust updates without tables |
 | `pclmul-rust` | Scalar fallback, x86-64 PCLMUL/VPCLMUL updates, and safe runtime dispatch |
+| `pmull-rust` | Scalar fallback, ARM64 PMULL updates, and safe runtime dispatch |
 
 `--stats` writes operation counts to stderr, keeping generated code on stdout.
 Raw counts measure shared DAG nodes; canonical and factored counts measure binary
@@ -148,6 +149,53 @@ functions use unsafe operations.
 Hardware programs are not included in the portable word-operation DAG ratings.
 Existing search results remain readable; source fingerprints include both the
 backend and its template so runs from different generators cannot be mixed.
+
+## ARM64 PMULL byte streams
+
+```sh
+cargo run --release -- 0x42f0e1eba9ea3693 --width 64 --msb-first --format pmull-rust > ecma_update.rs
+```
+
+Use `spec.pmull()?.rust()` in the generator API. It supports all widths 1..=64,
+both CRC bit orders, and byte input (`--data-bits 8`). The degree-64 folding
+constants and exact reciprocal reduction are shared with PCLMUL through
+`folding::FoldingConstants`; the existing `pclmul::FoldingConstants` path remains
+available. Neither backend adds production dependencies or executes unsafe code
+inside the generator.
+
+Generated functions use the same raw-register convention as the scalar forms:
+
+- `crc_update_bytes(crc, bytes)` safely dispatches to PMULL from 16 bytes when
+  little-endian ARM64 and CPU/OS support NEON, AES and PMULL. Otherwise it uses
+  the portable scalar word form, including on non-ARM and big-endian targets.
+- `crc_update_bytes_scalar(crc, bytes)` is always portable.
+- On little-endian ARM64, `unsafe crc_update_bytes_pmull(crc, bytes)` is the
+  direct hardware entry point. Call `pmull_available()` first, or use safe
+  dispatch. Its target feature requirements apply even for short inputs.
+
+Rust groups PMULL intrinsics under the `aes` target feature; runtime dispatch
+checks the distinct AES and PMULL capabilities plus NEON. Hardware features stay
+inside the generated functions. Four independent 128-bit accumulators process
+bulk buffers, with narrower folds and scalar tails. RBIT and byte shuffles
+convert reflected input to the common polynomial representation. No overreads,
+alignment assumptions, lookup tables, initialization or final XOR are introduced.
+The code uses `std` for runtime detection and is intended for userspace; kernel
+integration must use the kernel's own SIMD context and feature APIs.
+
+[The ARM64 benchmark](benchmarks/arm64/README.md) compares CRC-64/ECMA and common
+CRCs against scalar byte/block forms and `crc` single-table/slicing-by-16 methods.
+It refuses timing on non-ARM64 or PMULL-less hosts. `--check` supports portable
+and emulated correctness checks. The native GitHub workflow records the CPU,
+compiler, exact source, all timing rounds, and the execution architecture.
+
+The PMULL regression compiles standalone generated programs, checks an independent
+polynomial-division oracle, every data/seed basis bit, arbitrary seeds, tails,
+unaligned buffers and incremental chunks. Linux guard-page checks use the runtime
+page size, including ARM systems with larger pages. To cross-check generated
+programs locally, `CRC_GEN_PMULL_TARGET`, `CRC_GEN_PMULL_RUSTFLAGS_JSON`,
+`CRC_GEN_PMULL_RUNNER` and `CRC_GEN_PMULL_RUNNER_ARGS_JSON` configure compilation
+and execution without shell evaluation. Set `CRC_GEN_REQUIRE_PMULL=1` to fail
+rather than silently skip hardware when the test environment promises PMULL.
 
 ## Bit and polynomial conventions
 

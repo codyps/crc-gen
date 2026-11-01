@@ -93,6 +93,7 @@ fn emitted_intrinsics_match_division_across_boundaries_alignments_and_streaming(
             .unwrap();
             writeln!(calls,r#"
     {{
+        #[allow(unused_mut)]
         let mut functions: Vec<(&str, fn(u64,&[u8])->u64)> = vec![("scalar",{name}::crc_update_bytes_scalar),("dispatch",{name}::crc_update_bytes)];
         #[cfg(target_arch="x86_64")]
         {{

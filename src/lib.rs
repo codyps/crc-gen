@@ -23,7 +23,9 @@ use std::fmt::{self, Write};
 
 pub mod block;
 pub mod catalogue;
+pub mod folding;
 pub mod pclmul;
+pub mod pmull;
 pub mod rating;
 pub mod search;
 

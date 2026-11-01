@@ -1,0 +1,267 @@
+<!DOCTYPE HTML PUBLIC "-//SoftQuad Software//DTD HoTMetaL PRO 5.0::19981217::extensions to HTML 4.0//EN" "hmpro5.dtd"> 
+ 
+<HTML>
+ 
+<HEAD>
+<META NAME="viewport" CONTENT="width=device-width, initial-scale=1.0"> 
+<TITLE> 32 Bit CRC Zoo</TITLE>
+</HEAD>
+
+<BODY>
+<H1 ALIGN="CENTER">CRC Polynomial Zoo</H1>
+<P ALIGN="CENTER"><B>Philip Koopman, Carnegie Mellon University</B></P>
+<H3><A HREF="index.html">Best CRCs</A> | <A HREF="details.html">CRC
+Selection</A> | CRC Zoo | <A HREF="http://checksumcrc.blogspot.com/">Checksum
+and CRC Blog</A><BR>
+<BR>
+Select # Bits in CRC below (see also
+<A HREF="http://users.ece.cmu.edu/~koopman/crc/notes.html">NOTES PAGE</A>):<BR>
+<A HREF="crc3.html">3</A>,&nbsp; <A HREF="crc4.html">4</A>,&nbsp;
+<A HREF="crc5.html">5</A>,&nbsp; <A HREF="crc6.html">6</A>,&nbsp;
+<A HREF="crc7.html">7</A>,&nbsp; <A HREF="crc8.html">8</A>,&nbsp;
+<A HREF="crc9.html">9</A>,&nbsp; <A HREF="crc10.html"> 10</A>,&nbsp;
+<A HREF="crc11.html">11</A>,&nbsp; <A HREF="crc12.html">12</A>,&nbsp;
+<A HREF="crc13.html">13</A>,&nbsp; <A HREF="crc14.html">14</A>,&nbsp;
+<A HREF="crc15.html">15</A>, <BR>
+<A HREF="crc16.html">16</A>,&nbsp; <A HREF="crc17.html">17</A>,&nbsp;
+<A HREF="crc18.html">18</A>,&nbsp; <A HREF="crc19.html">19</A>,&nbsp;
+<A HREF="crc20.html">20</A>,&nbsp; <A HREF="crc21.html">21</A>,&nbsp;
+<A HREF="crc22.html">22</A>,&nbsp; <A HREF="crc23.html">23</A>,&nbsp;
+<A HREF="crc24.html">24</A>,&nbsp; <A HREF="crc25.html">25</A>,&nbsp;
+<A HREF="crc26.html">26</A>,&nbsp; <A HREF="crc27.html">27</A>,&nbsp;
+<A HREF="crc28.html">28</A>,&nbsp; <A HREF="crc29.html">29</A>,&nbsp;
+<A HREF="crc30.html">30</A>,&nbsp; <A HREF="crc31.html">31</A>,<BR>
+<A HREF="crc32.html">32</A>,&nbsp; <A HREF="crc36.html">33-36</A>,&nbsp;
+<A HREF="crc40.html">37-40</A>,&nbsp; <A HREF="crc44.html">41-44</A>,&nbsp;
+<A HREF="crc48.html">45-48</A>,&nbsp; <A HREF="crc52.html">49-52</A>,&nbsp;
+<A HREF="crc56.html">53-56</A>,&nbsp; <A HREF="crc60.html">57-60</A>,&nbsp;
+<A HREF="crc63.html">61-63</A>,&nbsp; <A HREF="crc64.html">64</A></H3>
+<HR>
+<H3><A NAME="crc32">32 Bit CRCs:</A></H3>
+<UL>
+<LI><TT>(<A HREF="c32/0xad0424f3.txt">0xad0424f3</A>; 0x15a0849e7) &lt;=&gt;
+(0xe792105a; 0x1cf2420b5) <A
+HREF="c32/0xad0424f3_len.txt">{<B>4294967263</B>,427053,817,522,149,63,27,19,19,19,9,9,6}</A>
+| <A HREF="c32/0xad0424f3.gold">gold</A> | (*p) CRC-32K/3.1</TT></LI>
+<LI><TT>(<A HREF="c32/0x945d045d.txt">0x945d045d</A>; 0x128ba08bb) &lt;=&gt;
+(0xdd105d14; 0x1ba20ba29) <A
+HREF="c32/0x945d045d_len.txt"><B>{4294967263</B>,184268,3603,526,136,100,48,38,38,10,10,10,4}</A>
+| <A HREF="c32/0x945d045d.gold">gold</A> | (*p) ) CRC-32K/3.8</TT></LI>
+<LI><TT>(<A HREF="c32/0x9d9947fd.txt">0x9d9947fd</A>; 0x13b328ffb) &lt;=&gt;
+(0xdff14cdc; 0x1bfe299b9) <A
+HREF="c32/0x9d9947fd_len.txt">{<B>4294967263</B>,146826,8162,361,145,60,56,33,16,16,6,6,4,4,1,1,1,1,1}</A>
+| <A HREF="c32/0x9d9947fd.gold">gold</A> | (*p) CRC-32K/3.2</TT></LI>
+<LI><TT>(<A HREF="c32/0xa3000000.txt">0xa3000000</A>; 0x146000001) &lt;=&gt;
+(0x80000062; 0x1000000c5) <A
+HREF="c32/0xa3000000_len.txt">{<B>4294967263</B>,142709,5249}</A> | (*p)
+32K/3sub8, 32K/5sub8</TT></LI>
+<LI><TT>(<A HREF="c32/0x87496166.txt">0x87496166</A>; 0x10e92c2cd) &lt;=&gt;
+(0xb3434970; 0x1668692e1) <A
+HREF="c32/0x87496166_len.txt">{<B>4294967263</B>,126795,2098,272,103,103,52,35,21,15,15,14,14}</A>
+| <A HREF="c32/0x87496166.gold">gold</A> | (*p) ) CRC-32K/3.11</TT></LI>
+<LI><TT>(<A HREF="c32/0x8e2371ef.txt">0x8e2371ef</A>; 0x11c46e3df) &lt;=&gt;
+(0xfbc76238; 0x1f78ec471) <A
+HREF="c32/0x8e2371ef_len.txt">{<B>4294967263</B>,118103,2438,1199,201,66,45,38,24,14,10,6,1,1,1,1,1}</A>
+| <A HREF="c32/0x8e2371ef.gold">gold</A> | (*p) CRC-32K/3.3</TT></LI>
+<LI><TT>(<A HREF="c32/0x8c746ed4.txt">0x8c746ed4</A>; 0x118e8dda9) &lt;=&gt;
+(0x95bb1718; 0x12b762e31) <A
+HREF="c32/0x8c746ed4_len.txt">{<B>4294967263</B>,116655,1682,490,102,76,67,42,22,15,10,10,10,10,4}</A>
+| <A HREF="c32/0x8c746ed4.gold">gold</A> | (*p) ) CRC-32K/3.12</TT></LI>
+<LI><TT>(<A HREF="c32/0x8efd4bcd.txt">0x8efd4bcd</A>; 0x11dfa979b) &lt;=&gt;
+(0xd9e95fb8; 0x1b3d2bf71) <A
+HREF="c32/0x8efd4bcd_len.txt">{<B>4294967263</B>,115159,1173,469,157,96,6,6,6,6,6,6,6,6,6,4,1,1,1}</A>
+| <A HREF="c32/0x8efd4bcd.gold">gold</A> | (*p) ) CRC-32K/3.13</TT></LI>
+<LI><TT>(<A HREF="c32/0x80000057.txt">0x80000057</A>; 0x1000000af) &lt;=&gt;
+(0xf5000000; 0x1ea000001) <A
+HREF="c32/0x80000057_len.txt">{<B>4294967263</B>,107274,2770,325,2}</A> |
+<A HREF="c32/0x80000057.gold">gold</A> | (*p) FP-32, CRC-32K/3</TT></LI>
+<LI><TT>(<A HREF="c32/0x8741c726.txt">0x8741c726</A>; 0x10e838e4d) &lt;=&gt;
+(0xb271c170; 0x164e382e1) <A
+HREF="c32/0x8741c726_len.txt">{<B>4294967263</B>,93289,2083,725,249,<B>163</B>,58,30,13,13,7,3,3}</A>
+| <A HREF="c32/0x8741c726.gold">gold</A> | (*p) CRC-32K/3.5 </TT></LI>
+<LI><TT>(<A HREF="c32/0x82608edb.txt">0x82608edb</A>; 0x104c11db7) &lt;=&gt;
+(0xedb88320; 0x1db710641) <A
+HREF="c32/0x82608edb_len.txt">{<B>4294967263</B>,91607,2974,268,171,91,57,34,21,12,10,10,10}</A>
+| <A HREF="c32/0x82608edb.gold">gold</A> | (*p) IEEE 802.3; CRC-32</TT></LI>
+<LI><TT>(<A HREF="c32/0x8ee5368f.txt">0x8ee5368f</A>; 0x11dca6d1f) &lt;=&gt;
+(0xf8b653b8; 0x1f16ca771) <A
+HREF="c32/0x8ee5368f_len.txt">{<B>4294967263</B>,82664,2704,489,145,86,30,27,27,27,10,6,6,4,4,3,1}</A>
+| <A HREF="c32/0x8ee5368f.gold">gold</A> | (*p) ) CRC-32K/3.9</TT></LI>
+<LI><TT>(<A HREF="c32/0xe47b4c57.txt">0xe47b4c57</A>; 0x1c8f698af) &lt;=&gt;
+(0xf5196f13; 0x1ea32de27) <A
+HREF="c32/0xe47b4c57_len.txt">{<B>4294967263</B>,58599,3333,722,232,107,59,27,6,6,6,6,6,6,6,4,1}</A>
+| <A HREF="c32/0xe47b4c57.gold">gold</A> | (*p) ) CRC-32K/3.14</TT></LI>
+<LI><TT>(<A HREF="c32/0xd2c0ef07.txt">0xd2c0ef07</A>; 0x1a581de0f) &lt;=&gt;
+(0xf07b81a5; 0x1e0f7034b) <A
+HREF="c32/0xd2c0ef07_len.txt">{<B>4294967263</B>,50057,971,625,153,91,<B>90</B>,39,11,11,5,5,1,1,1}</A>
+| <A HREF="c32/0xd2c0ef07.gold">gold</A> | (*p) CRC-32K/3.6</TT></LI>
+<LI><TT>(<A HREF="c32/0x80fcb077.txt">0x80fcb077</A>; 0x101f960ef) &lt;=&gt;
+(0xf7069f80; 0x1ee0d3f01) <A
+HREF="c32/0x80fcb077_len.txt">{<B>4294967263</B>,47729,3343,519,356,68,41,31,17,9,1,1,1,1,1}</A>
+| <A HREF="c32/0x80fcb077.gold">gold</A> | (*p) ) CRC-32K/3.4</TT></LI>
+<LI><TT>(<A HREF="c32/0x93b39b1b.txt">0x93b39b1b</A>; 0x127673637) &lt;=&gt;
+(0xec6ce6e4; 0x1d8d9cdc9) <A
+HREF="c32/0x93b39b1b_len.txt">{<B>4294967263</B>,41385,1745,515,210,71,67,32,29,20,<B>20</B>,8,4,4,4,2,1}</A>
+| <A HREF="c32/0x93b39b1b.gold">gold</A> | (*p) CRC-32K/13</TT></LI>
+<LI><TT>(<A HREF="c32/0xb338add6.txt">0xb338add6</A>; 0x166715bad) &lt;=&gt;
+(0xb5da8e66; 0x16bb51ccd) <A
+HREF="c32/0xb338add6_len.txt">{<B>4294967263</B>,40931,1969,224,198,63,63,58,25,11,11,5,4,2,2,2,2}</A>
+| <A HREF="c32/0xb338add6.gold">gold</A> | (*p) ) CRC-32K/3.7</TT></LI>
+<LI><TT>(<A HREF="c32/0x81d7e747.txt">0x81d7e747</A>; 0x103afce8f) &lt;=&gt;
+(0xf173f5c0; 0x1e2e7eb81) <A
+HREF="c32/0x81d7e747_len.txt">{<B>4294967263</B>,27933,2311,664,199,70,58,33,18,18,16,15,1,1,1,1,1}</A>
+| <A HREF="c32/0x81d7e747.gold">gold</A> | (*p) ) CRC-32K/3.10</TT></LI>
+</UL>
+<UL>
+<LI><TT>(<A HREF="c32/0x85b9561d.txt">0x85b9561d</A>; 0x10b72ac3b) &lt;=&gt;
+(0xdc354ed0; 0x1b86a9da1) <A
+HREF="c32/0x85b9561d_len.txt">{3758096345,182765,4916,575,106,86,47,41,<B>38</B>,18,9,9,6,2,2}</A>
+| <A HREF="c32/0x85b9561d.gold">gold</A> | CRC-32K/11</TT></LI>
+<LI><TT>(<A HREF="c32/0xa86be4db.txt">0xa86be4db</A>; 0x150d7c9b7) &lt;=&gt;
+(0xed93eb0a; 0x1db27d615) <A
+HREF="c32/0xa86be4db_len.txt">{3758096345,85881,2460,754,171,97,50,26,17,11,9,8,7,7,<B>7</B>,2,2}</A>
+| <A HREF="c32/0xa86be4db.gold">gold</A> | CRC-32K/17 </TT></LI>
+</UL>
+<UL>
+<LI><TT>(<A HREF="c32/0xc9d204f5.txt">0xc9d204f5</A>; 0x193a409eb) &lt;=&gt;
+(0xd79025c9; 0x1af204b93) <A
+HREF="c32/0xc9d204f5_len.txt">{2147483615,<B>2147483615</B>,6167,6167,148,148,44,44,25,25,8,8,3,3}</A>
+| <A HREF="c32/0xc9d204f5.gold">gold</A> | (*op) CRC-32K/4.2</TT></LI>
+<LI><TT>(<A HREF="c32/0x8f6e37a0.txt">0x8f6e37a0</A>; 0x11edc6f41) &lt;=&gt;
+(0x82f63b78; 0x105ec76f1) <A
+HREF="c32/0x8f6e37a0_len.txt">{2147483615,<B>2147483615</B>,5243,5243,177,177,47,47,20,20,8,8,6,6,1,1}</A>
+| <A HREF="c32/0x8f6e37a0.gold">gold</A> | (*op) iSCSI; CRC-32C; CRC-32/4</TT> 
+</LI>
+<LI><TT>(<A HREF="c32/0xef000000.txt">0xef000000</A>; 0x1de000001) &lt;=&gt;
+(0x8000007b; 0x1000000f7) <A
+HREF="c32/0xef000000_len.txt">{2147483615,<B>2147483615</B>,3985,3985,1,1}</A>
+| (*op) 32K/4sub8</TT></LI>
+<LI><TT>(<A HREF="c32/0x80002b8d.txt">0x80002b8d</A>; 0x10000571b) &lt;=&gt;
+(0xd8ea0000; 0x1b1d40001) <A
+HREF="c32/0x80002b8d_len.txt">{2147483615,<B>2147483615</B>,3525,3525,176,176,59,59}</A>
+| <A HREF="c32/0x80002b8d.gold">gold</A> | (*op) CRC-32K/4.1</TT></LI>
+<LI><TT>(<A HREF="c32/0xc0a0a0d5.txt">0xc0a0a0d5</A>; 0x1814141ab) &lt;=&gt;
+(0xd5828281; 0x1ab050503) <A
+HREF="c32/0xc0a0a0d5_len.txt">{2147483615,<B>2147483615</B>,2275,2275,160,160,34,34,7,7}</A>
+| <A HREF="c32/0xc0a0a0d5.gold">gold</A> | (*op) CRC-32Q</TT></LI>
+</UL>
+<UL>
+<LI><TT>(<A HREF="c32/0x973afb51.txt">0x973afb51</A>; 0x12e75f6a3) &lt;=&gt;
+(0xc56fae74; 0x18adf5ce9) <A
+HREF="c32/0x973afb51_len.txt">{2147483612,2147483612,4159,4159,173,173,50,50,8,8,8,8,8,8,5,<B>5</B>,2,2}</A>
+| <A HREF="c32/0x973afb51.gold">gold</A> | (*o) CRC-32K/18</TT></LI>
+<LI><TT>(<A HREF="c32/0x80000072.txt">0x80000072</A>; 0x1000000e5) &lt;=&gt;
+(0xa7000000; 0x14e000001) <A
+HREF="c32/0x80000072_len.txt">{1761607438,1761607438,4113,<B>4113</B>}</A> |
+<A HREF="c32/0x80000072.gold">gold</A> | (*o) CRC-32K/6sub8</TT></LI>
+<LI><TT> (<A HREF="c32/0xd7000000.txt">0xd7000000</A>; 0x1ae000001) &lt;=&gt;
+(0x80000075; 0x1000000eb) <A
+HREF="c32/0xd7000000_len.txt">{1417674933,73314,3337,610,210}</A> | 32K/7sub8 
+</TT></LI>
+<LI><TT>(<A HREF="c32/0x800000f6.txt">0x800000f6</A>; 0x1000001ed) &lt;=&gt;
+(0xb7800000; 0x16f000001) <A
+HREF="c32/0x800000f6_len.txt">{715128459,715128459,2738,2738,100,100}</A> |
+<A HREF="c32/0x800000f6.gold">gold</A> | (*o) Ray32sub8</TT></LI>
+<LI><TT>(<A HREF="c32/0xe89061db.txt">0xe89061db</A>; 0x1d120c3b7) &lt;=&gt;
+(0xedc3048b; 0x1db860917) <A
+HREF="c32/0xe89061db_len.txt">{469503982,469503982,2782,2782,128,128,38,38,21,21,13,13,13,<B>13</B>}</A>
+| <A HREF="c32/0xe89061db.gold">gold</A> | (*o) CRC-32K/16</TT></LI>
+<LI><TT>(<A HREF="c32/0x950ebfae.txt">0x950ebfae</A>; 0x12a1d7f5d) &lt;=&gt;
+(0xbafeb854; 0x175fd70a9) <A
+HREF="c32/0x950ebfae_len.txt">{306184014,306184014,2340,2340,162,162,41,41,36,<B>36</B>,2,2,2,2,2,2,2,2}</A>
+| <A HREF="c32/0x950ebfae.gold">gold</A> | (*o) CRC-32K/12</TT></LI>
+<LI><TT>(<A HREF="c32/0xa2572962.txt">0xa2572962</A>; 0x144ae52c5) &lt;=&gt;
+(0xa34a7522; 0x14694ea45) <A
+HREF="c32/0xa2572962_len.txt">{73678013,73678013,3008,646,132,60,16,16,16,15,15,15,<B>15</B>}</A>
+| <A HREF="c32/0xa2572962.gold">gold</A> | CRC-32K/15</TT></LI>
+<LI><TT>(<A HREF="c32/0x82408edb.txt">0x82408edb</A>; 0x104811db7) &lt;=&gt;
+(0xedb88120; 0x1db710241) <A
+HREF="c32/0x82408edb_len.txt">{65011649,65011649,1746,1746,120,120,45,45,21,21,9,9}</A>
+| <A HREF="c32/0x82408edb.gold">gold</A> | (*o) CRC-32variant</TT></LI>
+<LI><TT>(<A HREF="c32/0xfb567d89.txt">0xfb567d89</A>; 0x1f6acfb13) &lt;=&gt;
+(0xc8df356f; 0x191be6adf) <A
+HREF="c32/0xfb567d89_len.txt">{12582874,105056,2922,383,146,101,57,36,12,12,12,7,6,4,3,2,1,1,1}</A>
+| <A HREF="c32/0xfb567d89.gold">gold</A> | CRC-32/6 original</TT></LI>
+<LI><TT>(<A HREF="c32/0xba0dc66b.txt">0xba0dc66b</A>; 0x1741b8cd7) &lt;=&gt;
+(0xeb31d82e; 0x1d663b05d) <A
+HREF="c32/0xba0dc66b_len.txt">{114663,114663,16360,16360,152,152,18,18,16,16,4,4,2,2,2,2}</A>
+| <A HREF="c32/0xba0dc66b.gold">gold</A> | (*o) CRC-32K/6.1</TT></LI>
+<LI><TT>(<A HREF="c32/0x9960034c.txt">0x9960034c</A>; 0x132c00699) &lt;=&gt;
+(0x9960034c; 0x132c00699) <A
+HREF="c32/0x9960034c_len.txt">{65506,65506,32738,32738,193,193,31,31,17,17}</A>
+| <A HREF="c32/0x9960034c.gold">gold</A> | (*o) CRC-32K/6.4</TT></LI>
+<LI><TT>(<A HREF="c32/0x992c1a4c.txt">0x992c1a4c</A>; 0x132583499) &lt;=&gt;
+(0x992c1a4c; 0x132583499) <A
+HREF="c32/0x992c1a4c_len.txt">{65506,65506,32738,32738,134,134,26,26,16,16,3,3}</A>
+| <A HREF="c32/0x992c1a4c.gold">gold</A> | (*o) CRC-32K/6.2 (&quot;Koopman 2002
+{1,1,30}a&quot;)</TT></LI>
+<LI><TT>(<A HREF="c32/0x90022004.txt">0x90022004</A>; 0x120044009) &lt;=&gt;
+(0x90022004; 0x120044009) <A
+HREF="c32/0x90022004_len.txt">{65506,65506,32738,32738}</A> |
+<A HREF="c32/0x90022004.gold">gold</A> | (*o) CRC-32K/6.3 (&quot;Koopman 2002
+{1,1,30}b&quot;)</TT></LI>
+<LI><TT>(<A HREF="c32/0xd419cc15.txt">0xd419cc15</A>; 0x1a833982b) &lt;=&gt;
+(0xd419cc15; 0x1a833982b) <A
+HREF="c32/0xd419cc15_len.txt">{65505,65505,65505,1060,81,58,27,27,21,17,3,3,3}</A>
+| <A HREF="c32/0xd419cc15.gold">gold</A> | CRC-32/5.1</TT></LI>
+<LI><TT>(<A HREF="c32/0x80108400.txt">0x80108400</A>; 0x100210801) &lt;=&gt;
+(0x80108400; 0x100210801) <A
+HREF="c32/0x80108400_len.txt">{65505,65505,65505}</A> |
+<A HREF="c32/0x80108400.gold">gold</A> | &quot;Koopman 2002 {32}&quot;</TT> 
+</LI>
+<LI><TT>(<A HREF="c32/0xab96b942.txt">0xab96b942</A>; 0x1572d7285) &lt;=&gt;
+(0xa14eb4ea; 0x1429d69d5) <A
+HREF="c32/0xab96b942_len.txt">{65503,65503,65503,997,234,78,48,36,20,6,6,3,2,2,2}</A>
+| <A HREF="c32/0xab96b942.gold">gold</A> | CRC-32/5.2</TT></LI>
+<LI><TT>(<A HREF="c32/0xfa567d89.txt">0xfa567d89</A>; 0x1f4acfb13) &lt;=&gt;
+(0xc8df352f; 0x191be6a5f) <A
+HREF="c32/0xfa567d89_len.txt">{65502,65502,32736,32736,274,274,24,24,11,11,5,5,4,4,3,3,1,1}</A>
+| <A HREF="c32/0xfa567d89.gold">gold</A> | (*o) CRC-32/6 corrected </TT></LI>
+<LI><TT>(<A HREF="c32/0xf8c9140a.txt">0xf8c9140a</A>; 0x1f1922815) &lt;=&gt;
+(0xa814498f; 0x15028931f) <A
+HREF="c32/0xf8c9140a_len.txt">{2014,2014,992,992,992,992,66,66,16,16,12,12}</A>
+| <A HREF="c32/0xf8c9140a.gold">gold</A> | (*o) CRC-32/8</TT></LI>
+<LI><TT>(<A HREF="c32/0xb49c1c96.txt">0xb49c1c96</A>; 0x16938392d) &lt;=&gt;
+(0xb49c1c96; 0x16938392d) <A
+HREF="c32/0xb49c1c96_len.txt">{484,484,101,101,101,101,100,100,6,6,6,6,6,6}</A>
+| <A HREF="c32/0xb49c1c96.gold">gold</A> | (*o) CRC-32K/10</TT></LI>
+<LI><TT>(<A HREF="c32/0x9d7f97d6.txt">0x9d7f97d6</A>; 0x13aff2fad) &lt;=&gt;
+(0xb5f4ff5c; 0x16be9feb9) <A
+HREF="c32/0x9d7f97d6_len.txt">{223,223,223,223,223,223,<B>223</B>,46,12,12,8,8,2,2,2,2,1,1,1,1,1}</A>
+| <A HREF="c32/0x9d7f97d6.gold">gold</A> | CRC-32K/9</TT></LI>
+<LI><TT>(<A HREF="c32/0xa094afb5.txt">0xa094afb5</A>; 0x141295f6b) &lt;=&gt;
+(0xd6fa9482; 0x1adf52905) <A
+HREF="c32/0xa094afb5_len.txt">{19,19,19,19,19,19,19,19,19,19,19,<B>19</B>,2,2,2}</A>
+| <A HREF="c32/0xa094afb5.gold">gold</A> | CRC-32K/14</TT></LI>
+<LI><TT>(<A HREF="c32/0x80000000.txt">0x80000000</A>; 0x100000001) &lt;=&gt;
+(0x80000000; 0x100000001) <A HREF="c32/0x80000000_len.txt">{}</A> |
+<A HREF="c32/0x80000000.gold">gold</A> | (*o) </TT></LI>
+</UL>
+<UL>
+<LI> &quot;Interesting&quot; polynomials that support within 32 bits of the
+maximum length at the stated HD.<UL>
+<LI><A HREF="c32/32_hd5.out">List of all interesting 32-bit HD=5
+polynomials</A></LI>
+<LI><A HREF="c32/32_hd6.out">List of all interesting 32-bit HD=6
+polynomials</A></LI>
+</UL>
+</LI>
+</UL>
+<P>0x8A050222 {4160749505,128678,2313,648,154,105,68} |
+<A
+ HREF="https://bitsavers.org/components/westernDigital/_dataBooks/1983_Western_Digital_Components_Catalog.pdf">WD-32
+CRC</A></P>
+<HR>
+<P>See the <A HREF="http://users.ece.cmu.edu/~koopman/crc/notes.html">NOTES
+PAGE</A> for interpreting this data. Last update 3/9/2024.</P>
+<P>Thanks to Poul-Henning Kamp for identifying the WD-32 CRC.</P>
+<P><A REL="license"
+HREF="http://creativecommons.org/licenses/by/4.0/"><IMG SRC="../gif/ccby4.gif"
+ALT="{CC BY 4.0}" WIDTH="157" HEIGHT="40" BORDER="0"></A><BR>
+This work is copyright 2015-2024 by Philip Koopman. Licensed under a
+<A REL="license" HREF="http://creativecommons.org/licenses/by/4.0/">Creative
+Commons Attribution 4.0 International License</A>.</P>
+<HR>
+</BODY>
+</HTML>
+

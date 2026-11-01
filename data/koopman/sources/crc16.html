@@ -1,0 +1,210 @@
+<!DOCTYPE HTML PUBLIC "-//SoftQuad Software//DTD HoTMetaL PRO 5.0::19981217::extensions to HTML 4.0//EN" "hmpro5.dtd"> 
+ 
+<HTML>
+ 
+<HEAD>
+<META NAME="viewport" CONTENT="width=device-width, initial-scale=1.0"> 
+<TITLE>16 Bit CRC Zoo</TITLE>
+</HEAD>
+
+<BODY>
+<H1 ALIGN="CENTER">CRC Polynomial Zoo</H1>
+<P ALIGN="CENTER"><B>Philip Koopman, Carnegie Mellon University</B></P>
+<H3><A HREF="index.html">Best CRCs</A> | <A HREF="details.html">CRC
+Selection</A> | CRC Zoo | <A HREF="http://checksumcrc.blogspot.com/">Checksum
+and CRC Blog</A><BR>
+<BR>
+Select # Bits in CRC below (see also
+<A HREF="http://users.ece.cmu.edu/~koopman/crc/notes.html">NOTES PAGE</A>):<BR>
+<A HREF="crc3.html">3</A>,&nbsp; <A HREF="crc4.html">4</A>,&nbsp;
+<A HREF="crc5.html">5</A>,&nbsp; <A HREF="crc6.html">6</A>,&nbsp;
+<A HREF="crc7.html">7</A>,&nbsp; <A HREF="crc8.html">8</A>,&nbsp;
+<A HREF="crc9.html">9</A>,&nbsp; <A HREF="crc10.html"> 10</A>,&nbsp;
+<A HREF="crc11.html">11</A>,&nbsp; <A HREF="crc12.html">12</A>,&nbsp;
+<A HREF="crc13.html">13</A>,&nbsp; <A HREF="crc14.html">14</A>,&nbsp;
+<A HREF="crc15.html">15</A>, <BR>
+<A HREF="crc16.html">16</A>,&nbsp; <A HREF="crc17.html">17</A>,&nbsp;
+<A HREF="crc18.html">18</A>,&nbsp; <A HREF="crc19.html">19</A>,&nbsp;
+<A HREF="crc20.html">20</A>,&nbsp; <A HREF="crc21.html">21</A>,&nbsp;
+<A HREF="crc22.html">22</A>,&nbsp; <A HREF="crc23.html">23</A>,&nbsp;
+<A HREF="crc24.html">24</A>,&nbsp; <A HREF="crc25.html">25</A>,&nbsp;
+<A HREF="crc26.html">26</A>,&nbsp; <A HREF="crc27.html">27</A>,&nbsp;
+<A HREF="crc28.html">28</A>,&nbsp; <A HREF="crc29.html">29</A>,&nbsp;
+<A HREF="crc30.html">30</A>,&nbsp; <A HREF="crc31.html">31</A>,<BR>
+<A HREF="crc32.html">32</A>,&nbsp; <A HREF="crc36.html">33-36</A>,&nbsp;
+<A HREF="crc40.html">37-40</A>,&nbsp; <A HREF="crc44.html">41-44</A>,&nbsp;
+<A HREF="crc48.html">45-48</A>,&nbsp; <A HREF="crc52.html">49-52</A>,&nbsp;
+<A HREF="crc56.html">53-56</A>,&nbsp; <A HREF="crc60.html">57-60</A>,&nbsp;
+<A HREF="crc63.html">61-63</A>,&nbsp; <A HREF="crc64.html">64</A></H3>
+<HR>
+<H3><A NAME="crc16"> 16 Bit CRCs:</A></H3>
+<UL>
+<LI><TT>(<A HREF="c16/0x8d95.txt">0x8d95</A>; 0x11b2b) &lt;=&gt; (0xd4d8;
+0x1a9b1) <A HREF="c16/0x8d95_len.txt">{<B>65519</B>,1149,62,19,9,5,5}</A> |
+<A HREF="c16/0x8d95.gold">gold</A> | (*p) CRC-16F/3 (&quot;215453p&quot;)</TT> 
+</LI>
+<LI><TT>(<A HREF="c16/0xfdbf.txt">0xfdbf</A>; 0x1fb7f) &lt;=&gt; (0xfedf;
+0x1fdbf) <A
+HREF="c16/0xfdbf_len.txt">{<B>65519</B>,647,34,34,1,1,1,1,1,1,1,1,1}</A> |
+<A HREF="c16/0xfdbf.gold">gold</A> | (*p) CRC-16F/11 (&quot;375577p&quot;) 
+</TT></LI>
+<LI><TT>(<A HREF="c16/0x8016.txt">0x8016</A>; 0x1002d) &lt;=&gt; (0xb400;
+0x16801) <A HREF="c16/0x8016_len.txt">{<B>65519</B>,551,40}</A> |
+<A HREF="c16/0x8016.gold">gold</A> | (*p) FP-16</TT></LI>
+<LI><TT>(<A HREF="c16/0xc7ab.txt">0xc7ab</A>; 0x18f57) &lt;=&gt; (0xeaf1;
+0x1d5e3) <A HREF="c16/0xc7ab_len.txt">{<B>65519</B>,474,52,16,6,6,6,2,1}</A> |
+<A HREF="c16/0xc7ab.gold">gold</A> | (*p) CRC-16K/3</TT></LI>
+<LI><TT>(<A HREF="c16/0x979e.txt">0x979e</A>; 0x12f3d) &lt;=&gt; (0xbcf4;
+0x179e9) <A HREF="c16/0x979e_len.txt">{<B>65519</B>,462,33,13,13,8,5,3,1}</A>|
+<A HREF="c16/0x979e.gold">gold</A> | (*p) CRC-16F/10.1 (&quot;227475p&quot;) 
+</TT></LI>
+<LI><TT>(<A HREF="c16/0x9627.txt">0x9627</A>; 0x12c4f) &lt;=&gt; (0xf234;
+0x1e469) <A HREF="c16/0x9627_len.txt">{<B>65519</B>,390,119,15,11,4,4}</A>|
+<A HREF="c16/0x9627.gold">gold</A> | (*p) CRC-16K/5</TT></LI>
+<LI><TT>(<A HREF="c16/0xe433.txt">0xe433</A>; 0x1c867) &lt;=&gt; (0xe613;
+0x1cc27) <A HREF="c16/0xe433_len.txt">{<B>65519</B>,361,44,11,11,5,1}</A>|
+<A HREF="c16/0xe433.gold">gold</A> | (*p) CRC-16-CMDA2000</TT></LI>
+<LI><TT>(<A HREF="c16/0xc5db.txt">0xc5db</A>; 0x18bb7) &lt;=&gt; (0xedd1;
+0x1dba3) <A HREF="c16/0xc5db_len.txt">{<B>65519</B>,353,47,23,8,2,2,2,1}</A> |
+<A HREF="c16/0xc5db.gold">gold</A> | (*p) CRC-16-T10-DIF</TT></LI>
+<LI><TT>(<A HREF="c16/0xac6f.txt">0xac6f</A>; 0x158df) &lt;=&gt; (0xfb1a;
+0x1f635) <A HREF="c16/0xac6f_len.txt">{<B>65519</B>,259,75,14,14,9,6,2,1}</A>|
+<A HREF="c16/0xac6f.gold">gold</A> | (*p) CRC-16F/9 (&quot;254337p&quot;) </TT>
+</LI>
+<LI><TT>(<A HREF="c16/0xb82d.txt">0xb82d</A>; 0x1705b) &lt;=&gt; (0xda0e;
+0x1b41d) <A HREF="c16/0xb82d_len.txt">{<B>65519</B>,221,22,18,18,2,2}</A>|
+<A HREF="c16/0xb82d.gold">gold</A> | (*p) CRC-16K/7.2</TT></LI>
+<LI><TT>(<A HREF="c16/0x88f9.txt">0x88f9</A>; 0x111f3) &lt;=&gt; (0xcf88;
+0x19f11) <A HREF="c16/0x88f9_len.txt">{<B>65519</B>,96,88,20,15,11,1}</A>|
+<A HREF="c16/0x88f9.gold">gold</A> | (*p) CRC-16F/8.1 (&quot;210763p&quot;) 
+</TT></LI>
+<LI><TT>(<A HREF="c16/0x86f2.txt">0x86f2</A>; 0x10de5) &lt;=&gt; (0xa7b0;
+0x14f61) <A HREF="c16/0x86f2_len.txt">{<B>65519</B>,83,53,40,6,6,5}</A> |
+<A HREF="c16/0x86f2.gold">gold</A> | (*p) CRC-16K/6</TT></LI>
+</UL>
+<UL>
+<LI><TT>(<A HREF="c16/0x978a.txt">0x978a</A>; 0x12f15) &lt;=&gt; (0xa8f4;
+0x151e9) <A HREF="c16/0x978a_len.txt">{64881,178,67,28,16,11,2}</A> |
+<A HREF="c16/0x978a.gold">gold</A> | Chakravarty</TT></LI>
+</UL>
+<UL>
+<LI><TT>(<A HREF="c16/0xd175.txt">0xd175</A>; 0x1a2eb) &lt;=&gt; (0xd745;
+0x1ae8b) <A HREF="c16/0xd175_len.txt">{32751,<B>32751</B>,93,93,11,11,2,2}</A>
+| <A HREF="c16/0xd175.gold">gold</A> | (*op) C5; CRC-16F/4.2
+(&quot;321353&quot;)</TT></LI>
+<LI><TT>(<A HREF="c16/0x8fdb.txt">0x8fdb</A>; 0x11fb7) &lt;=&gt; (0xedf8;
+0x1dbf1) <A
+HREF="c16/0x8fdb_len.txt">{32751,<B>32751</B>,51,51,15,<B>15</B>,1,1,1,1}</A> |
+<A HREF="c16/0x8fdb.gold">gold</A> | (*op) CRC-16F/8.2 (&quot;217667&quot;) 
+</TT></LI>
+<LI><TT>(<A HREF="c16/0xed2f.txt">0xed2f</A>; 0x1da5f) &lt;=&gt; (0xfa5b;
+0x1f4b7) <A
+HREF="c16/0xed2f_len.txt">{32751,<B>32751</B>,46,46,8,8,5,<B>5</B>,1,1}</A> |
+<A HREF="c16/0xed2f.gold">gold</A> | (*op) CRC-16K/10</TT></LI>
+<LI><TT>(<A HREF="c16/0xc4bd.txt">0xc4bd</A>; 0x1897b) &lt;=&gt; (0xde91;
+0x1bd23) <A HREF="c16/0xc4bd_len.txt">{32751,<B>32751</B>,43,43,4,4,4,4}</A> |
+<A HREF="c16/0xc4bd.gold">gold</A> | (*op) CRC-16Q</TT></LI>
+<LI><TT>(<A HREF="c16/0xb57d.txt">0xb57d</A>; 0x16afb) &lt;=&gt; (0xdf56;
+0x1bead) <A
+HREF="c16/0xb57d_len.txt">{32751,<B>32751</B>,27,27,11,11,2,2,2,2}</A> |
+<A HREF="c16/0xb57d.gold">gold</A> | (*op) CRC-16F/12 (&quot;265373&quot;) 
+</TT></LI>
+<LI><TT>(<A HREF="c16/0xefff.txt">0xefff</A>; 0x1dfff) &lt;=&gt; (0xfffb;
+0x1fff7) <A
+HREF="c16/0xefff_len.txt">{32751,<B>32751</B>,1,1,1,1,1,1,1,1,1,1,1,1}</A> |
+<A HREF="c16/0xefff.gold">gold</A> | (*op) CRC-16F/14 (&quot;357777&quot;) 
+</TT></LI>
+<LI><TT>(<A HREF="c16/0xa001.txt">0xa001</A>; 0x14003) &lt;=&gt; (0xc002;
+0x18005) <A HREF="c16/0xa001_len.txt">{32751,<B>32751</B>}</A> |
+<A HREF="c16/0xa001.gold">gold</A> | (*op) CRC-16; CRC-16-IBM</TT></LI>
+<LI><TT>(<A HREF="c16/0x8003.txt">0x8003</A>; 0x10007) &lt;=&gt; (0xe000;
+0x1c001) <A HREF="c16/0x8003_len.txt">{32751,<B>32751</B>}</A> |
+<A HREF="c16/0x8003.gold">gold</A> | (*op) FOP-16</TT></LI>
+<LI><TT>(<A HREF="c16/0x8810.txt">0x8810</A>; 0x11021) &lt;=&gt; (0x8408;
+0x10811) <A HREF="c16/0x8810_len.txt">{32751,<B>32751</B>}</A> |
+<A HREF="c16/0x8810.gold">gold</A> | (*op) CCITT-16</TT></LI>
+</UL>
+<UL>
+<LI><TT>(<A HREF="c16/0x9747.txt">0x9747</A>; 0x12e8f) &lt;=&gt; (0xf174;
+0x1e2e9) <A HREF="c16/0x9747_len.txt">{32750,32750,78,78,9,9,5,5}</A> |
+<A HREF="c16/0x9747.gold">gold</A> | (*o) CRC-16F/10.2 (&quot;227217&quot;) 
+</TT></LI>
+<LI><TT>(<A HREF="c16/0xd04b.txt">0xd04b</A>; 0x1a097) &lt;=&gt; (0xe905;
+0x1d20b) <A HREF="c16/0xd04b_len.txt">{32750,32750,67,67,8,8}</A> |
+<A HREF="c16/0xd04b.gold">gold</A> | (*o) IBM-16</TT></LI>
+<LI><TT>(<A HREF="c16/0x808d.txt">0x808d</A>; 0x1011b) &lt;=&gt; (0xd880;
+0x1b101) <A HREF="c16/0x808d_len.txt">{28642,28642,99,<B>99</B>}</A> |
+<A HREF="c16/0x808d.gold">gold</A> | (*o) C4; CRC-16/6sub8</TT></LI>
+<LI><TT>(<A HREF="c16/0x935a.txt">0x935a</A>; 0x126b5) &lt;=&gt; (0xad64;
+0x15ac9) <A HREF="c16/0x935a_len.txt">{21467,375,23,22,<B>19</B>,4,3}</A> |
+<A HREF="c16/0x935a.gold">gold</A> | CRC-16F/7 (&quot;223265&quot;)</TT></LI>
+<LI><TT>(<A HREF="c16/0xa10e.txt">0xa10e</A>; 0x1421d) &lt;=&gt; (0xb842;
+0x17085) <A HREF="c16/0xa10e_len.txt">{19669,19669,87,28,9}</A>|
+<A HREF="c16/0xa10e.gold">gold</A> | CRC-16F/4.1 (&quot;241035&quot;)</TT> 
+</LI>
+<LI><TT>(<A HREF="c16/0x968b.txt">0x968b</A>; 0x12d17) &lt;=&gt; (0xe8b4;
+0x1d169) <A HREF="c16/0x968b_len.txt">{16367,363,19,19,<B>19</B>,8,4}</A>|
+<A HREF="c16/0x968b.gold">gold</A> | CRC-16K/7.1</TT></LI>
+<LI><TT>(<A HREF="c16/0xbaad.txt">0xbaad</A>; 0x1755b) &lt;=&gt; (0xdaae;
+0x1b55d) <A HREF="c16/0xbaad_len.txt">{7985,7985,108,20,11,2,2,2,2}</A> |
+<A HREF="c16/0xbaad.gold">gold</A> | CRC-16K/4 </TT></LI>
+<LI><TT>(<A HREF="c16/0xd3e9.txt">0xd3e9</A>; 0x1a7d3) &lt;=&gt; (0xcbe5;
+0x197cb) <A HREF="c16/0xd3e9_len.txt">{7985,7985,25,11,11,3,3,3,1}</A> |
+<A HREF="c16/0xd3e9.gold">gold</A> | </TT></LI>
+<LI><TT>(<A HREF="c16/0xd015.txt">0xd015</A>; 0x1a02b) &lt;=&gt; (0xd405;
+0x1a80b) <A HREF="c16/0xd015_len.txt">{5339,556,75,12,9}</A> |
+<A HREF="c16/0xd015.gold">gold</A>| CRC_16-ARINC</TT></LI>
+<LI><TT>(<A HREF="c16/0x8ee7.txt">0x8ee7</A>; 0x11dcf) &lt;=&gt; (0xf3b8;
+0x1e771) <A HREF="c16/0x8ee7_len.txt">{2743,2743,104,11,10,8,1,1,1}</A> |
+<A HREF="c16/0x8ee7.gold">gold</A> | ProfiBus</TT></LI>
+<LI><TT>(<A HREF="c16/0xcbab.txt">0xcbab</A>; 0x19757) &lt;=&gt; (0xeae9;
+0x1d5d3) <A HREF="c16/0xcbab_len.txt">{299,299,59,59,6,3,3,2,2}</A> |
+<A HREF="c16/0xcbab.gold">gold</A>| CRC-16F/6.1 (&quot;313527&quot;)</TT> </LI>
+<LI><TT>(<A HREF="c16/0xf94f.txt">0xf94f</A>; 0x1f29f) &lt;=&gt; (0xf94f;
+0x1f29f) <A HREF="c16/0xf94f_len.txt">{242,242,114,114,6,6,1,1,1,1}</A> |
+<A HREF="c16/0xf94f.gold">gold</A> | (*o) C2</TT></LI>
+<LI><TT>(<A HREF="c16/0xac9a.txt">0xac9a</A>; 0x15935) &lt;=&gt; (0xac9a;
+0x15935) <A HREF="c16/0xac9a_len.txt">{241,241,<B>241</B>,35,10,8,3}</A> |
+<A HREF="c16/0xac9a.gold">gold</A> | C3; CRC-16F/5 (&quot;254465s&quot;)</TT> 
+</LI>
+<LI><TT>(<A HREF="c16/0xb7b1.txt">0xb7b1</A>; 0x16f63) &lt;=&gt; (0xc6f6;
+0x18ded) <A HREF="c16/0xb7b1_len.txt">{239,239,239,14,13,2,2,2,1}</A> |
+<A HREF="c16/0xb7b1.gold">gold</A> | IEEE WG77.1</TT></LI>
+<LI><TT>(<A HREF="c16/0xa755.txt">0xa755</A>; 0x14eab) &lt;=&gt; (0xd572;
+0x1aae5) <A HREF="c16/0xa755_len.txt">{238,238,112,112,9,9,2,2}</A> |
+<A HREF="c16/0xa755.gold">gold</A> | (*o) </TT></LI>
+<LI><TT>(<A HREF="c16/0xadc9.txt">0xadc9</A>; 0x15b93) &lt;=&gt; (0xc9da;
+0x193b5) <A HREF="c16/0xadc9_len.txt">{238,238,112,112,9,9,3,3}</A> |
+<A HREF="c16/0xadc9.gold">gold</A> | (*o) IEC TC57</TT></LI>
+<LI><TT>(<A HREF="c16/0x82c4.txt">0x82c4</A>; 0x10589) &lt;=&gt; (0x91a0;
+0x12341) <A HREF="c16/0x82c4_len.txt">{238,238,112,112}</A> |
+<A HREF="c16/0x82c4.gold">gold</A> | (*o) CRC-16-DECT</TT></LI>
+<LI><TT>(<A HREF="c16/0x9eb2.txt">0x9eb2</A>; 0x13d65) &lt;=&gt; (0xa6bc;
+0x14d79) <A HREF="c16/0x9eb2_len.txt">{135,135,135,<B>135</B>,6,6,4,4}</A> |
+<A HREF="c16/0x9eb2.gold">gold</A> | (*o) C1; CRC-16-DNP; CRC-16F/6.2
+(&quot;236545&quot;)</TT></LI>
+<LI><TT>(<A HREF="c16/0xc86c.txt">0xc86c</A>; 0x190d9) &lt;=&gt; (0x9b09;
+0x13613) <A HREF="c16/0xc86c_len.txt">{135,135,135,<B>135</B>,5,5}</A> |
+<A HREF="c16/0xc86c.gold">gold</A> | (*o) </TT></LI>
+<LI><TT>(<A HREF="c16/0xe92f.txt">0xe92f</A>; 0x1d25f) &lt;=&gt; (0xfa4b;
+0x1f497) <A HREF="c16/0xe92f_len.txt">{89,9,9,9,9,9,<B>6</B>,3,1}</A> |
+<A HREF="c16/0xe92f.gold">gold</A> | CRC-16K/9</TT></LI>
+<LI><TT>(<A HREF="c16/0x8080.txt">0x8080</A>; 0x10101) &lt;=&gt; (0x8080;
+0x10101) <A HREF="c16/0x8080_len.txt">{8}</A> | Data General floppy drive CRC
+</TT></LI>
+</UL>
+<P><A HREF="c16/c16_hd.out">HD profile for all unique 16-bit CRCs</A></P>
+<HR>
+<P>See the <A HREF="http://users.ece.cmu.edu/~koopman/crc/notes.html">NOTES
+PAGE</A>for interpreting this data. Last update 3/5/2024.</P>
+<P>Thanks to Poul-Henning Kamp for info on 0x8080.</P>
+<P><A REL="license"
+HREF="http://creativecommons.org/licenses/by/4.0/"><IMG SRC="../gif/ccby4.gif"
+ALT="{CC BY 4.0}" WIDTH="157" HEIGHT="40" BORDER="0"></A><BR>
+This work is copyright 2015-2024 by Philip Koopman. Licensed under a
+<A REL="license" HREF="http://creativecommons.org/licenses/by/4.0/">Creative
+Commons Attribution 4.0 International License</A>.</P>
+<HR>
+</BODY>
+</HTML>
+

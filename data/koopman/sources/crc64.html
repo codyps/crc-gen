@@ -1,0 +1,87 @@
+<!DOCTYPE HTML PUBLIC "-//SoftQuad Software//DTD HoTMetaL PRO 5.0::19981217::extensions to HTML 4.0//EN" "hmpro5.dtd"> 
+ 
+<HTML>
+ 
+<HEAD>
+<META NAME="viewport" CONTENT="width=device-width, initial-scale=1.0"> 
+<TITLE> 64 Bit CRC Zoo</TITLE>
+</HEAD>
+
+<BODY>
+<H1 ALIGN="CENTER">CRC Polynomial Zoo</H1>
+<P ALIGN="CENTER"><B>Philip Koopman, Carnegie Mellon University</B></P>
+<H3><A HREF="index.html">Best CRCs</A> | <A HREF="details.html">CRC
+Selection</A>| CRC Zoo | <A HREF="http://checksumcrc.blogspot.com/">Checksum
+and CRC Blog</A><BR>
+<BR>
+Select # Bits in CRC below (see also
+<A HREF="http://users.ece.cmu.edu/~koopman/crc/notes.html">NOTES PAGE</A>):<BR>
+<A HREF="crc3.html">3</A>,&nbsp; <A HREF="crc4.html">4</A>,&nbsp;
+<A HREF="crc5.html">5</A>,&nbsp; <A HREF="crc6.html">6</A>,&nbsp;
+<A HREF="crc7.html">7</A>,&nbsp; <A HREF="crc8.html">8</A>,&nbsp;
+<A HREF="crc9.html">9</A>,&nbsp; <A HREF="crc10.html"> 10</A>,&nbsp;
+<A HREF="crc11.html">11</A>,&nbsp; <A HREF="crc12.html">12</A>,&nbsp;
+<A HREF="crc13.html">13</A>,&nbsp; <A HREF="crc14.html">14</A>,&nbsp;
+<A HREF="crc15.html">15</A>, <BR>
+<A HREF="crc16.html">16</A>,&nbsp; <A HREF="crc17.html">17</A>,&nbsp;
+<A HREF="crc18.html">18</A>,&nbsp; <A HREF="crc19.html">19</A>,&nbsp;
+<A HREF="crc20.html">20</A>,&nbsp; <A HREF="crc21.html">21</A>,&nbsp;
+<A HREF="crc22.html">22</A>,&nbsp; <A HREF="crc23.html">23</A>,&nbsp;
+<A HREF="crc24.html">24</A>,&nbsp; <A HREF="crc25.html">25</A>,&nbsp;
+<A HREF="crc26.html">26</A>,&nbsp; <A HREF="crc27.html">27</A>,&nbsp;
+<A HREF="crc28.html">28</A>,&nbsp; <A HREF="crc29.html">29</A>,&nbsp;
+<A HREF="crc30.html">30</A>,&nbsp; <A HREF="crc31.html">31</A>,<BR>
+<A HREF="crc32.html">32</A>,&nbsp; <A HREF="crc36.html">33-36</A>,&nbsp;
+<A HREF="crc40.html">37-40</A>,&nbsp; <A HREF="crc44.html">41-44</A>,&nbsp;
+<A HREF="crc48.html">45-48</A>,&nbsp; <A HREF="crc52.html">49-52</A>,&nbsp;
+<A HREF="crc56.html">53-56</A>,&nbsp; <A HREF="crc60.html">57-60</A>,&nbsp;
+<A HREF="crc63.html">61-63</A>,&nbsp; <A HREF="crc64.html">64</A></H3>
+<HR>
+<H3><A NAME="crc64">64-Bit CRCs</A></H3>
+<P><U>UNDER CONSTRUCTION:</U></P>
+<UL>
+<LI><TT>(<A HREF="c64/0xd6c9e91aca649ad4.txt">0xd6c9e91aca649ad4</A>;
+0x1ad93d23594c935a9) &lt;=&gt; (0x95ac9329ac4bc9b5; 0x12b5926535897936b)
+{<B>18446744073709551551</B>,12296205748,1626758,76349,20947,<FONT
+COLOR="#FF0000">?HD=8?&gt;=1024,?HD=9?,?HD=10?,<B>????HD=11?????&gt;=163?</B>,?HD=12?&gt;=109,?HD=13?&gt;=88,?HD=14?&gt;=75,?HD=15?&gt;=66,?HD=16?&gt;=66,</FONT>51,51,32,32,22,21,21,10,5,5,3,3,3,3,3,3,3}<A
+HREF="0xd6c9e91aca649ad4.len"></A> | (*p) Jones </TT></LI>
+<LI><TT>(<A HREF="0x800000000000000d_short.txt">0x800000000000000d</A>;
+0x1000000000000001b) &lt;=&gt; (0xd800000000000000; 0x1b000000000000001)
+{<B>18446744073709551551</B>,<FONT
+COLOR="#FF0000">&gt;=500000000</FONT>,6082497} | (*p) FP-64, CRC-64-ISO </TT> 
+</LI>
+<LI><TT>(0x800000000000002b; 0x10000000000000057) &lt;=&gt;
+(0xea00000000000000; 0x1d400000000000001)
+{9223372036854775743,<B>9223372036854775743</B>, 4483948,4483948} (*op) FOP-64 
+</TT> </LI>
+<LI><TT>(<A HREF="0xa17870f5d4f51b49_short.txt">0xa17870f5d4f51b49</A>;
+0x142f0e1eba9ea3693) &lt;=&gt; (0xc96c5795d7870f42; 0x192d8af2baf0e1e85)
+{8589606850,8589606850,126701,126701,<FONT
+COLOR="#FF0000">&gt;=32768,&gt;=32768</FONT>,<FONT
+COLOR="#FF0000">?HD=9?,?HD=10?,<B>?????HD=11?????&gt;=168</B>,?HD=12?,?HD=13?,?HD=14?,?HD=15?,?HD=16?,?HD=17?&gt;=60,?HD=18?,</FONT>32,32,24,24,7,7,7,7,5,5,5,5,3,3,2,2}
+| (*o) CRC-64-ECMA </TT></LI>
+</UL>
+<UL>
+<LI><TT>(0x8000000000000078; 0x100000000000000f1) &lt;=&gt;
+(0x8f00000000000000; 0x11e00000000000001) {<FONT
+COLOR="#FF0000">&gt;=500000000</FONT>,<FONT
+COLOR="#FF0000">&gt;=500000000</FONT>,6077357,6077357}| (*o) CRC-64/6sub8x ** 
+</TT></LI>
+</UL>
+<HR>
+<P>See the <A HREF="http://users.ece.cmu.edu/~koopman/crc/notes.html">NOTES
+PAGE</A> for interpreting this data. Last update 11/2019.</P>
+<P>Jones CRC: HD=4, HD=5 lengths courtesy of Prof. B. Gick.</P>
+<P><A REL="license"
+HREF="http://creativecommons.org/licenses/by/4.0/"><IMG
+ALT="Creative Commons License" STYLE="border-width:0"
+SRC="https://i.creativecommons.org/l/by/4.0/88x31.png"></A><BR>
+This work is copyright 2019-2021 by Philip Koopman. Licensed under a
+<A REL="license" HREF="http://creativecommons.org/licenses/by/4.0/">Creative
+Commons Attribution 4.0 International License</A>.</P>
+<HR>
+<HR>
+<HR>
+</BODY>
+</HTML>
+

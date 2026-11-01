@@ -1,0 +1,115 @@
+<!DOCTYPE HTML PUBLIC "-//SoftQuad Software//DTD HoTMetaL PRO 5.0::19981217::extensions to HTML 4.0//EN" "hmpro5.dtd"> 
+ 
+<HTML>
+ 
+<HEAD>
+<META NAME="viewport" CONTENT="width=device-width, initial-scale=1.0"> 
+<TITLE>8 Bit CRC Zoo</TITLE>
+</HEAD>
+
+<BODY>
+<H1 ALIGN="CENTER">CRC Polynomial Zoo</H1>
+<P ALIGN="CENTER"><B>Philip Koopman, Carnegie Mellon University</B></P>
+<H3><A HREF="index.html">Best CRCs</A> | <A HREF="details.html">CRC
+Selection</A> | CRC Zoo | <A HREF="http://checksumcrc.blogspot.com/">Checksum
+and CRC Blog</A><BR>
+<BR>
+Select # Bits in CRC below (see also
+<A HREF="http://users.ece.cmu.edu/~koopman/crc/notes.html">NOTES PAGE</A>):<BR>
+<A HREF="crc3.html">3</A>,&nbsp; <A HREF="crc4.html">4</A>,&nbsp;
+<A HREF="crc5.html">5</A>,&nbsp; <A HREF="crc6.html">6</A>,&nbsp;
+<A HREF="crc7.html">7</A>,&nbsp; <A HREF="crc8.html">8</A>,&nbsp;
+<A HREF="crc9.html">9</A>,&nbsp; <A HREF="crc10.html"> 10</A>,&nbsp;
+<A HREF="crc11.html">11</A>,&nbsp; <A HREF="crc12.html">12</A>,&nbsp;
+<A HREF="crc13.html">13</A>,&nbsp; <A HREF="crc14.html">14</A>,&nbsp;
+<A HREF="crc15.html">15</A>, <BR>
+<A HREF="crc16.html">16</A>,&nbsp; <A HREF="crc17.html">17</A>,&nbsp;
+<A HREF="crc18.html">18</A>,&nbsp; <A HREF="crc19.html">19</A>,&nbsp;
+<A HREF="crc20.html">20</A>,&nbsp; <A HREF="crc21.html">21</A>,&nbsp;
+<A HREF="crc22.html">22</A>,&nbsp; <A HREF="crc23.html">23</A>,&nbsp;
+<A HREF="crc24.html">24</A>,&nbsp; <A HREF="crc25.html">25</A>,&nbsp;
+<A HREF="crc26.html">26</A>,&nbsp; <A HREF="crc27.html">27</A>,&nbsp;
+<A HREF="crc28.html">28</A>,&nbsp; <A HREF="crc29.html">29</A>,&nbsp;
+<A HREF="crc30.html">30</A>,&nbsp; <A HREF="crc31.html">31</A>,<BR>
+<A HREF="crc32.html">32</A>,&nbsp; <A HREF="crc36.html">33-36</A>,&nbsp;
+<A HREF="crc40.html">37-40</A>,&nbsp; <A HREF="crc44.html">41-44</A>,&nbsp;
+<A HREF="crc48.html">45-48</A>,&nbsp; <A HREF="crc52.html">49-52</A>,&nbsp;
+<A HREF="crc56.html">53-56</A>,&nbsp; <A HREF="crc60.html">57-60</A>,&nbsp;
+<A HREF="crc63.html">61-63</A>,&nbsp; <A HREF="crc64.html">64</A></H3>
+<HR>
+<H2><A NAME="crc8"> 8 Bit CRCs:</A></H2>
+<UL>
+<LI><TT>(<A HREF="c08/0xe7.txt">0xe7</A>; 0x1cf) &lt;=&gt; (0xf3; 0x1e7)
+<A HREF="c08/0xe7_len.txt">{<B>247</B>,19,1,1,1}</A> [@246:proper,3.7x] |
+<A HREF="c08/0xe7.gold">gold</A> | (*p) CRC-8F/3 (&quot;717p&quot;) </TT></LI>
+<LI><TT>(<A HREF="c08/0xa6.txt">0xa6</A>; 0x14d) &lt;=&gt; (0xb2; 0x165)
+<A HREF="c08/0xa6_len.txt">{<B>247</B>,15,6}</A> [@246:proper,2.7x] |
+<A HREF="c08/0xa6.gold">gold</A> | (*p) CRC-8K/3</TT></LI>
+<LI><TT>(<A HREF="c08/0x8e.txt">0x8e</A>; 0x11d) &lt;=&gt; (0xb8; 0x171)
+<A HREF="c08/0x8e_len.txt">{<B>247</B>,13,6}</A> [@246:proper,6.2x] |
+<A HREF="c08/0x8e.gold">gold</A> | (*p) SAE J-1850; FP-8</TT></LI>
+<LI><TT>(<A HREF="c08/0xb1.txt">0xb1</A>; 0x163) &lt;=&gt; (0xc6; 0x18d)
+<A HREF="c08/0xb1_len.txt">{<B>247</B>,12,4}</A> [@246:proper,8.1x] |
+<A HREF="c08/0xb1.gold">gold</A> | (*p) CCITT-8</TT></LI>
+</UL>
+<UL>
+<LI><TT>(<A HREF="c08/0xbf.txt">0xbf</A>; 0x17f) &lt;=&gt; (0xfe; 0x1fd)
+<A HREF="c08/0xbf_len.txt">{119,<B>119</B>,1,1,1,1}</A> [@245:proper,11.0x] |
+<A HREF="c08/0xbf.gold">gold</A> | (*op) CRC-8F/8 (&quot;577&quot;)</TT></LI>
+<LI><TT>(<A HREF="c08/0x97.txt">0x97</A>; 0x12f) &lt;=&gt; (0xf4; 0x1e9)
+<A HREF="c08/0x97_len.txt">{119,<B>119</B>,3,3}</A> [@245:proper,6.3x] |
+<A HREF="c08/0x97.gold">gold</A> | (*op) C2; CRC-8-AUTOSAR; CRC-8F/4.2
+(&quot;457&quot;)</TT> </LI>
+<LI><TT>(<A HREF="c08/0xd3.txt">0xd3</A>; 0x1a7) &lt;=&gt; (0xe5; 0x1cb)
+<A HREF="c08/0xd3_len.txt">{119,<B>119</B>,3,3}</A> [@245:proper,3.9x] |
+<A HREF="c08/0xd3.gold">gold</A> | (*op) CRC-8-Bluetooth</TT></LI>
+<LI><TT>(<A HREF="c08/0xcd.txt">0xcd</A>; 0x19b) &lt;=&gt; (0xd9; 0x1b3)
+<A HREF="c08/0xcd_len.txt">{119,<B>119</B>,2,2}</A> [@245:proper,8.9x] |
+<A HREF="c08/0xcd.gold">gold</A> | (*op) WCDMA-8</TT></LI>
+<LI><TT>(<A HREF="c08/0x83.txt">0x83</A>; 0x107) &lt;=&gt; (0xe0; 0x1c1)
+<A HREF="c08/0x83_len.txt">{119,<B>119</B>}</A> [@245:1.1x,2.5x] |
+<A HREF="c08/0x83.gold">gold</A> | (*op) FOP-8; ATM-8; CRC-8P</TT></LI>
+<LI><TT>(<A HREF="c08/0x98.txt">0x98</A>; 0x131) &lt;=&gt; (0x8c; 0x119)
+<A HREF="c08/0x98_len.txt">{119,<B>119</B>}</A> | [@245:proper,3.6x]
+<A HREF="c08/0x98.gold">gold</A> | (*op) DOWCRC </TT></LI>
+</UL>
+<UL>
+<LI><TT>(<A HREF="c08/0x9b.txt">0x9b</A>; 0x137) &lt;=&gt; (0xec; 0x1d9)
+<A HREF="c08/0x9b_len.txt">{118,118,4,<B>4</B>}</A> [@243:proper,7.2x] |
+<A HREF="c08/0x9b.gold">gold</A> | (*o) CRC-8F/6 (&quot;467&quot;)</TT></LI>
+<LI><TT>(<A HREF="c08/0xa4.txt">0xa4</A>; 0x149) &lt;=&gt; (0x92; 0x125)
+<A HREF="c08/0xa4_len.txt">{97,97}</A> | <A HREF="c08/0xa4.gold">gold</A>
+[@201:proper,9.1x] | (*o) CRC-8-GSM-B</TT></LI>
+<LI><TT>(<A HREF="c08/0xea.txt">0xea</A>; 0x1d5) &lt;=&gt; (0xab; 0x157)
+<A HREF="c08/0xea_len.txt">{85,85,2,2}</A> [@177:proper,4.2x] |
+<A HREF="c08/0xea.gold">gold</A> | (*o) CRC-8</TT></LI>
+<LI><TT>(<A HREF="c08/0x8d.txt">0x8d</A>; 0x11b) &lt;=&gt; (0xd8; 0x1b1)
+<A HREF="c08/0x8d_len.txt">{43,26,5}</A> [@42:proper,6.6x] |
+<A HREF="c08/0x8d.gold">gold</A> | CRC-8F/4.1 (&quot;433&quot;)</TT></LI>
+<LI><TT>(<A HREF="c08/0x9c.txt">0x9c</A>; 0x139) &lt;=&gt; (0x9c; 0x139)
+<A HREF="c08/0x9c_len.txt">{9,9,<B>9</B>}</A> [@8:proper,1.8x] |
+<A HREF="c08/0x9c.gold">gold</A> | DARC-8 </TT></LI>
+<LI><TT>(<A HREF="c08/0xeb.txt">0xeb</A>; 0x1d7) &lt;=&gt; (0xeb; 0x1d7)
+<A HREF="c08/0xeb_len.txt">{9,9,<B>9</B>,2,1}</A> [@8:proper,2.1x] |
+<A HREF="c08/0xeb.gold">gold</A> | CRC-8F/5 (&quot;727s&quot;)</TT></LI>
+<LI><TT>(<A HREF="c08/0x80.txt">0x80</A>; 0x101) &lt;=&gt; (0x80; 0x101)
+<A HREF="c08/0x80_len.txt">{}</A> [@7:5.4x,6.4x] | <A
+HREF="c08/0x80.gold">gold</A> | (*o) </TT></LI>
+</UL>
+<P><A HREF="c08/c08_hd.out">HD profile for all unique 8-bit CRCs</A></P>
+<HR>
+<P>NOTE: Original polynomial selection did not consider dataword lengths less
+than 4. 0x97 is arguably a better HD=4 polynomial since it has HD=5 up to
+length 3. Thanks to Bernhard Linder for pointing this out.</P>
+<P>See the <A HREF="http://users.ece.cmu.edu/~koopman/crc/notes.html">NOTES
+PAGE</A> for interpreting this data. Last update 3/5/2024.</P>
+<P><A REL="license"
+HREF="http://creativecommons.org/licenses/by/4.0/"><IMG SRC="../gif/ccby4.gif"
+ALT="{CC BY 4.0}" WIDTH="157" HEIGHT="40" BORDER="0"></A><BR>
+This work is copyright 2015-2024 by Philip Koopman. Licensed under a
+<A REL="license" HREF="http://creativecommons.org/licenses/by/4.0/">Creative
+Commons Attribution 4.0 International License</A>.</P>
+<HR>
+</BODY>
+</HTML>
+

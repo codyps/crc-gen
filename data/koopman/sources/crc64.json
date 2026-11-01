@@ -1,0 +1,8 @@
+{
+  "url": "https://users.ece.cmu.edu/~koopman/crc/crc64.html",
+  "sha256": "674bf5d6317f14141342bffd9a6aed16ca8e854fa60d6486043e82181cc92b6c",
+  "retrieved_utc": "2026-11-01T01:12:24.205703+00:00",
+  "file": "sources/crc64.html",
+  "license": "https://creativecommons.org/licenses/by/4.0/",
+  "attribution": "Philip Koopman, Carnegie Mellon University; CRC Polynomial Zoo"
+}

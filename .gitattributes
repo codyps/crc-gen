@@ -1,0 +1,2 @@
+# Preserve downloaded source bytes exactly for provenance checksums.
+data/koopman/sources/*.html -text -whitespace

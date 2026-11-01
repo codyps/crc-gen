@@ -15,6 +15,7 @@ fn output_formats_and_stats() {
         ("equations", "t0 = "),
         ("rust", "pub fn crc_update("),
         ("word-rust", "pub fn crc_update("),
+        ("block-rust", "pub fn crc_update_16("),
     ] {
         for order in ["--msb-first", "--lsb-first"] {
             let output = run(&["0x10_21", order, "--format", format, "--stats"]);
@@ -29,6 +30,7 @@ fn output_formats_and_stats() {
     }
     assert_eq!(run(&[]).stdout, run(&["0b1000000100001"]).stdout);
     assert!(run(&["--help"]).status.success());
+    assert!(String::from_utf8_lossy(&run(&["--help"]).stdout).contains("block-rust"));
 }
 
 #[test]
@@ -51,6 +53,8 @@ fn reject_invalid_arguments_without_panicking() {
         vec!["--format", "bogus"],
         vec!["--format"],
         vec!["--unknown"],
+        vec!["--width", "24", "--format", "block-rust"],
+        vec!["--data-bits", "16", "--format", "block-rust"],
     ] {
         let output = run(&args);
         let stderr = String::from_utf8_lossy(&output.stderr);

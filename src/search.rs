@@ -26,6 +26,7 @@ pub fn engine_fingerprint() -> String {
             env!("CARGO_PKG_VERSION"),
             include_str!("lib.rs"),
             include_str!("rating.rs"),
+            include_str!("block.rs"),
             include_str!("catalogue.rs"),
             include_str!("search.rs"),
             include_str!("../Cargo.lock")

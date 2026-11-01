@@ -43,6 +43,7 @@ Output formats:
 | `equations` | Factored bit equations with shared `tN` temporaries (default) |
 | `rust` | A standalone `crc_update(crc: u64, data: u64) -> u64` using factored bits |
 | `word-rust` | A Rust update using masked words and shared shift/XOR feedback folds |
+| `block-rust` | Byte, 16-byte block, and arbitrary-slice Rust updates without tables |
 
 `--stats` writes operation counts to stderr, keeping generated code on stdout.
 Raw counts measure shared DAG nodes; canonical and factored counts measure binary
@@ -60,6 +61,41 @@ The search retains the lowest unit operation count, breaking ties by dependency
 depth, and keeps the masked-diagonal baseline if no candidate improves it.
 Factoring is heuristic: it searches single folds, not every equivalent program,
 and does not guarantee the shortest form or the fastest code for a CPU.
+
+## Table-free 16-byte updates
+
+```sh
+cargo run --release -- 0xe5 --width 32 --msb-first --format block-rust > update.rs
+```
+
+`block-rust` supports CRC widths 8, 16, 32 and 64 with `--data-bits 8`.
+It emits three alternatives sharing the same raw register conventions:
+
+- `crc_update(crc, data)` consumes one byte, as in `word-rust`.
+- `crc_update_16(crc, &[u8; 16])` consumes exactly 16 bytes.
+- `crc_update_bytes(crc, &[u8])` uses 16-byte blocks plus byte-at-a-time tails.
+
+Input byte order follows the slice order for both CRC bit orders. All updates
+ignore high register bits; the slice helper also masks an empty-input seed.
+Initialization, final reflection and final XOR are the caller's responsibility.
+In the generator library, use `spec.block16()?.rust()`; `Block16::evaluate` and
+`lane_graphs` expose the equivalent maps for verification and operation ratings.
+
+A block is decomposed into register-sized words (16 byte-sized words for CRC-8, eight
+16-bit words, four 32-bit words, or two 64-bit words). Let A advance the register
+by one register-sized zero word. For n words, the update is
+`A^n(crc XOR word[0]) XOR A^(n-1)(word[1]) XOR ... XOR A(word[n-1])`.
+Each map is derived by independent polynomial division, simplified with masked
+shifts and reversible XOR folds, and checked on every input basis bit. Generated
+code computes independent contributions with a balanced final XOR tree; it has
+no lookup tables or hardware-specific instructions. This removes the serial
+byte-update chain, but dense polynomials can produce larger, slower programs.
+Benchmark both alternatives on the target CPU; the slice helper selects blocks
+by input length, not by a claim that blocks always win.
+
+Block graphs are available through the library. Existing durable search jobs
+and their rankings continue to rate the specified scalar update dimensions;
+they do not store or rank the 128-bit block decomposition.
 
 ## Bit and polynomial conventions
 

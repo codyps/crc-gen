@@ -21,6 +21,7 @@
 use std::collections::{BTreeMap, BTreeSet};
 use std::fmt::{self, Write};
 
+pub mod block;
 pub mod catalogue;
 pub mod rating;
 pub mod search;

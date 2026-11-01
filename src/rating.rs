@@ -338,8 +338,9 @@ fn shifted(value: u64, shift: i16) -> u64 {
     }
 }
 
-fn feedback_graph(spec: CrcSpec, columns: &[u64], fold: i16) -> Graph {
-    let (width, bits) = (spec.width(), spec.data_bits());
+// Change basis in any linear input-word transform, including the advance
+// matrices used by table-free block updates.
+fn transform_groups(width: u8, bits: u8, columns: &[u64], fold: i16) -> BTreeMap<i16, u64> {
     let word_mask = low_mask(bits);
     let mut groups = BTreeMap::<i16, u64>::new();
     for input in 0..bits {
@@ -364,6 +365,13 @@ fn feedback_graph(spec: CrcSpec, columns: &[u64], fold: i16) -> Graph {
             }
         }
     }
+    groups
+}
+
+fn feedback_graph(spec: CrcSpec, columns: &[u64], fold: i16) -> Graph {
+    let (width, bits) = (spec.width(), spec.data_bits());
+    let word_mask = low_mask(bits);
+    let groups = transform_groups(width, bits, columns, fold);
     let mut b = Builder::default();
     let crc = b.node(Op::Crc, vec![]);
     let data = b.node(Op::Data, vec![]);
@@ -409,6 +417,47 @@ fn feedback_graph(spec: CrcSpec, columns: &[u64], fold: i16) -> Graph {
     let value = b.packed_xor_sum(terms);
     let output = b.and(value, low_mask(width));
     b.finish(output)
+}
+
+/// Simplify an arbitrary linear map from the low `bits` of Data to `width` bits.
+/// Unlike a CRC update this map has no implicit register/remainder contribution.
+pub(crate) fn linear_word_graph(width: u8, bits: u8, columns: &[u64]) -> Graph {
+    let mut best = None;
+    let model = CostModel::default();
+    let folds = std::iter::once(0).chain((1..bits).flat_map(|n| [-i16::from(n), i16::from(n)]));
+    for fold in folds {
+        let mut b = Builder::default();
+        let input = b.node(Op::Data, vec![]);
+        let mut input = b.and(input, low_mask(bits));
+        if fold != 0 {
+            let shifted = b.shift(input, fold);
+            input = b.node(Op::Xor, vec![input, shifted]);
+            input = b.and(input, low_mask(bits));
+        }
+        let mut terms = Vec::new();
+        for (shift, mask) in transform_groups(width, bits, columns, fold) {
+            let boundary = if shift >= 0 {
+                low_mask(bits) & (low_mask(width) >> shift)
+            } else {
+                low_mask(bits) & (u64::MAX << -shift)
+            };
+            let value = if mask == boundary {
+                input
+            } else {
+                b.and(input, mask)
+            };
+            terms.push(b.shift(value, shift));
+        }
+        let value = b.packed_xor_sum(terms);
+        let output = b.and(value, low_mask(width));
+        let graph = b.finish(output);
+        let metrics = graph.measure(&model).expect("generated linear graph");
+        let key = (metrics.weighted_cost, metrics.critical_path);
+        if best.as_ref().is_none_or(|(previous, _)| key < *previous) {
+            best = Some((key, graph));
+        }
+    }
+    best.unwrap().1
 }
 
 impl Graph {

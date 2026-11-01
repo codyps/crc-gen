@@ -1,5 +1,1 @@
-.TRACK-*
-crc-gen
-.tup/
-test-log
-.dir
+/target/

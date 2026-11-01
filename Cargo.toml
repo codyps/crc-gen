@@ -1,0 +1,9 @@
+[package]
+name = "crc-gen"
+version = "0.1.0"
+edition = "2021"
+publish = false
+description = "Generate and simplify symbolic, table-free CRC update equations"
+repository = "https://github.com/codyps/crc-gen"
+
+[dependencies]

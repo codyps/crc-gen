@@ -1,0 +1,16 @@
+[package]
+name = "crc-gen-arm64-bench"
+version = "0.1.0"
+edition = "2021"
+rust-version = "1.89"
+publish = false
+
+[dependencies]
+crc = "=3.4.0"
+serde_json = "1"
+
+[build-dependencies]
+crc-gen = { path = "../.." }
+
+[profile.release]
+codegen-units = 1

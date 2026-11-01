@@ -1,0 +1,62 @@
+name: ARM64 PMULL regression and benchmark
+on:
+  workflow_dispatch:
+  push:
+    branches: [bench/arm64-pmull]
+permissions:
+  contents: read
+jobs:
+  native-arm64:
+    runs-on: ubuntu-24.04-arm
+    timeout-minutes: 25
+    defaults:
+      run:
+        shell: bash
+    env:
+      CRC_GEN_REQUIRE_PMULL: '1'
+      CARGO_TERM_COLOR: never
+      RUSTUP_TOOLCHAIN: 1.99.0
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+      - name: Install the reproducible Rust toolchain
+        run: rustup toolchain install 1.99.0 --profile minimal --component clippy,rustfmt
+      - name: Require native ARM64 and record the machine
+        run: |
+          test "$(uname -m)" = aarch64
+          test "$RUNNER_ARCH" = ARM64
+          mkdir -p results
+          uname -a > results/uname.txt
+          lscpu > results/lscpu.txt
+          rustc +1.99.0 --version --verbose > results/rustc.txt
+      - name: Test and lint the generator and generated backends
+        run: |
+          cargo +1.99.0 test --locked -- --nocapture 2>&1 | tee results/tests.txt
+          cargo +1.99.0 clippy --locked --all-targets -- -D warnings
+          cargo +1.99.0 fmt --check
+          cargo +1.99.0 fmt --manifest-path benchmarks/arm64/Cargo.toml --check
+      - name: Build and check the benchmark
+        env:
+          CRC_GEN_BENCH_COMMIT: ${{ github.sha }}
+        run: |
+          cargo +1.99.0 build --release --locked --manifest-path benchmarks/arm64/Cargo.toml
+          benchmarks/arm64/target/release/crc-gen-arm64-bench --check
+      - name: Benchmark on one available CPU
+        run: |
+          bench_cpu=$(python3 -c 'import os; print(min(os.sched_getaffinity(0)))')
+          echo "Pinned CPU: $bench_cpu" > results/affinity.txt
+          taskset -c "$bench_cpu" benchmarks/arm64/target/release/crc-gen-arm64-bench --metadata results/metadata.json > results/timings.csv
+      - name: Save generated source and exact inputs
+        if: always()
+        run: |
+          git rev-parse HEAD > results/commit.txt
+          git archive --format=tar.gz HEAD > results/source.tar.gz
+          cp benchmarks/arm64/Cargo.lock results/benchmark-Cargo.lock
+          find benchmarks/arm64/target/release/build -path '*/out/generated.rs' -exec cp '{}' results/generated.rs \;
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
+        if: always()
+        with:
+          name: arm64-pmull-results
+          path: results/
+          retention-days: 30

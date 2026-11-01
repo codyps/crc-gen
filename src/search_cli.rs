@@ -75,6 +75,9 @@ enum Command {
     },
     /// Rank separately by CRC width, update width, and bit order.
     Rank {
+        /// Rank 128-bit block updates separately from scalar updates.
+        #[arg(long)]
+        block16: bool,
         #[command(flatten)]
         database: Database,
         #[arg(long)]
@@ -96,6 +99,9 @@ enum Command {
     },
     /// Export the exact recorded DAG or standalone Rust for a completed job.
     Export {
+        /// Export the stored 16-byte block DAG instead of a scalar variant.
+        #[arg(long, conflicts_with = "variant")]
+        block16: bool,
         #[command(flatten)]
         database: Database,
         #[arg(long)]
@@ -250,6 +256,7 @@ fn execute(command: Command) -> search::Result<()> {
             search::verify(&database.db, database.run_id.as_deref())?
         ),
         Command::Rank {
+            block16,
             database,
             width,
             data_bits,
@@ -272,6 +279,7 @@ fn execute(command: Command) -> search::Result<()> {
                 database.run_id.as_deref(),
                 &model,
                 &RankOptions {
+                    block16,
                     width,
                     bits: data_bits,
                     order,
@@ -284,11 +292,12 @@ fn execute(command: Command) -> search::Result<()> {
             println!(
                 "{}",
                 serde_json::to_string_pretty(
-                    &serde_json::json!({"version":1,"run_id":run_id,"model_sha256":catalogue::sha256(&serde_json::to_vec(&model)?),"model":model,"groups":result})
+                    &serde_json::json!({"version":2,"run_id":run_id,"model_sha256":catalogue::sha256(&serde_json::to_vec(&model)?),"model":model,"groups":result})
                 )?
             );
         }
         Command::Export {
+            block16,
             database,
             job,
             variant,
@@ -298,12 +307,20 @@ fn execute(command: Command) -> search::Result<()> {
             if format == "result" {
                 println!("{}", serde_json::to_string_pretty(&result)?);
             } else {
-                let variant = variant.unwrap_or(result.best(&CostModel::default())?.0);
-                let graph = &result
-                    .variants
-                    .get(variant)
-                    .ok_or("variant index out of range")?
-                    .graph;
+                let graph = if block16 {
+                    &result
+                        .block16
+                        .as_ref()
+                        .ok_or("result has no 16-byte block graph")?
+                        .graph
+                } else {
+                    let variant = variant.unwrap_or(result.best(&CostModel::default())?.0);
+                    &result
+                        .variants
+                        .get(variant)
+                        .ok_or("variant index out of range")?
+                        .graph
+                };
                 if format == "graph" {
                     println!("{}", serde_json::to_string_pretty(graph)?);
                 } else {
@@ -311,7 +328,7 @@ fn execute(command: Command) -> search::Result<()> {
                         "// width={}, polynomial={}, data_bits={}, order={}, optimizer={}",
                         result.width,
                         result.polynomial,
-                        result.data_bits,
+                        if block16 { 128 } else { result.data_bits },
                         result.order,
                         result.optimizer
                     );

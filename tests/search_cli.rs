@@ -77,6 +77,27 @@ fn cli_resume_rank_and_export() {
         .unwrap();
     assert!(exported.status.success());
     assert!(String::from_utf8_lossy(&exported.stdout).contains("pub fn crc_update"));
+    let blocks = json(
+        command(&db, "rank")
+            .args(["--block16", "--limit", "1"])
+            .output()
+            .unwrap(),
+    );
+    assert_eq!(blocks["groups"][0]["data_bits"], 128);
+    assert_eq!(blocks["groups"][0]["method"], "block16");
+    assert!(blocks["groups"][0]["entries"][0]["variant"].is_null());
+    let export = command(&db, "export")
+        .args(["--block16", "--job", "0"])
+        .output()
+        .unwrap();
+    assert!(export.status.success());
+    assert!(String::from_utf8_lossy(&export.stdout).contains("pub fn crc_update_16("));
+    assert!(!command(&db, "export")
+        .args(["--block16", "--variant", "0", "--job", "0"])
+        .output()
+        .unwrap()
+        .status
+        .success());
     let verified = command(&db, "verify").output().unwrap();
     assert!(verified.status.success());
     assert!(String::from_utf8_lossy(&verified.stdout).contains("Verified 5"));

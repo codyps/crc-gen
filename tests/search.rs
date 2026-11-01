@@ -334,3 +334,96 @@ fn exhaustive_domains_and_quality_filters_are_conservative() {
         0
     );
 }
+
+#[test]
+fn block_ratings_resume_rerate_and_audit_separately() {
+    let scratch = Scratch::new();
+    let db = scratch.db("blocks.sqlite");
+    let mut manifest = plan();
+    manifest.candidates.truncate(4);
+    for candidate in &mut manifest.candidates {
+        candidate.width = 8;
+    }
+    manifest.data_bits = vec![8];
+    assert_eq!(
+        run(
+            &db,
+            &manifest,
+            &RunOptions {
+                max_jobs: Some(3),
+                workers: 2,
+                ..RunOptions::default()
+            }
+        )
+        .unwrap()
+        .done,
+        3
+    );
+    assert_eq!(
+        run(
+            &db,
+            &manifest,
+            &RunOptions {
+                workers: 3,
+                ..RunOptions::default()
+            }
+        )
+        .unwrap()
+        .done,
+        8
+    );
+    let mut custom = CostModel {
+        id: "block-custom".into(),
+        ..CostModel::default()
+    };
+    custom.costs.xor = 11;
+    custom.latencies.xor = 5;
+    for model in [CostModel::default(), custom] {
+        let groups = rank(
+            &db,
+            None,
+            &model,
+            &RankOptions {
+                block16: true,
+                limit: 3,
+                ..RankOptions::default()
+            },
+        )
+        .unwrap();
+        assert_eq!(groups.len(), 2);
+        for group in groups {
+            assert_eq!(group.method, "block16");
+            assert_eq!(group.data_bits, 128);
+            for entry in group.entries {
+                assert_eq!(entry.variant, None);
+                assert_eq!(entry.data_bits, 128);
+                let stored = load(&db, None, entry.ordinal).unwrap();
+                assert_eq!(
+                    entry.metrics,
+                    stored.block16.unwrap().graph.measure(&model).unwrap()
+                );
+            }
+        }
+        let groups = rank(
+            &db,
+            None,
+            &model,
+            &RankOptions {
+                limit: 1,
+                ..RankOptions::default()
+            },
+        )
+        .unwrap();
+        assert!(groups
+            .iter()
+            .all(|g| g.data_bits == 8 && g.method == "scalar" && g.entries[0].variant.is_some()));
+    }
+    assert_eq!(verify(&db, None).unwrap(), 8);
+    let conn = Connection::open(&db).unwrap();
+    let attempts: u64 = conn
+        .query_row("SELECT sum(attempts) FROM jobs", [], |r| r.get(0))
+        .unwrap();
+    assert_eq!(attempts, 8);
+    conn.execute("UPDATE jobs SET summary=json_set(summary,'$.block16_metrics.weighted_cost',999999) WHERE ordinal=0", []).unwrap();
+    assert!(verify(&db, None).is_err());
+}

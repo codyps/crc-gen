@@ -120,6 +120,38 @@ The masked-word baseline remains a separate variant for comparison and re-rating
 The new optimizer/source fingerprint creates a new run: historical results stay
 readable, but cannot be resumed as if they had used the new simplifier.
 
+Native-width jobs (CRC-8/16/32/64 with `data-bits=8`) also retain a complete
+`block16` graph and rating, under optimizer `gf2-shift-fold-words-and-block16-v3`.
+The graph includes word inputs, seed masking/mixing, all advance maps, and the
+balanced final XOR tree, with shared operations interned across the whole block.
+The single graph's schedule gives dependency depth and live-value pressure;
+these are not sums of lane depths or register-pressure estimates.
+
+```sh
+target/release/crc-gen search rank --db results/koopman.sqlite --block16 --limit 10
+target/release/crc-gen search rank --db results/koopman.sqlite --block16 --min-hd 6 --min-length 1024
+target/release/crc-gen search export --db results/koopman.sqlite --job 0 --block16 --format rust
+```
+
+Block rankings are explicitly marked `method=block16`, `data_bits=128`, and
+`variant=null` (the block is a separate result field, not a scalar variant).
+Scalar rankings use `method=scalar` and retain their actual input dimension.
+Costs are per update: divide block cost by 16 for operations per byte. Do not
+compare raw 128-bit-update costs with raw 8-bit-update costs. Custom models
+re-rate the retained block DAG without regenerating it; HD filters are shared.
+
+Block graphs use version 2 with explicit native-word input nodes recording byte
+offset, width and endian order. Word loads and endian conversion have zero cost
+in the initial word-operation model, as do scalar inputs; a later ISA model must
+account for their actual instruction costs. Graph validation enforces bounds,
+shape and affine ORs. Verification covers zero, all 64 register basis bits, all
+128 block input basis bits, and all ones against independent polynomial division.
+The exported Rust consumes exactly `&[u8; 16]` and describes the rated DAG.
+
+Historical scalar-only results remain readable and rankable, with no block rows
+invented for them. The new optimizer and source fingerprint require a fresh run;
+existing results are never silently filled or mixed with new evaluations.
+
 Initial metrics are:
 
 - Counts of XOR, AND, OR, left shift and right shift (input/constant nodes cost zero).

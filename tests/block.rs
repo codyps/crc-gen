@@ -32,9 +32,16 @@ fn block_matrices_match_all_input_basis_vectors() {
             let spec = CrcSpec::new(width, poly, 8, order).unwrap();
             let block = spec.block16().unwrap();
             assert_eq!(block.lane_graphs().len(), 128 / usize::from(width));
+            let graph = block.operation_graph();
+            graph.validate().unwrap();
             let zero = [0; 16];
             assert_eq!(block.evaluate(0, &zero), 0);
+            assert!(graph.evaluate(0, 0).is_err());
             for bit in 0..64 {
+                assert_eq!(
+                    graph.evaluate_block(1u64 << bit, &zero).unwrap(),
+                    oracle(spec, 1u64 << bit, &zero)
+                );
                 assert_eq!(
                     block.evaluate(1u64 << bit, &zero),
                     oracle(spec, 1u64 << bit, &zero)
@@ -43,6 +50,10 @@ fn block_matrices_match_all_input_basis_vectors() {
             for bit in 0..128 {
                 let mut bytes = zero;
                 bytes[bit / 8] = 1 << (bit % 8);
+                assert_eq!(
+                    graph.evaluate_block(0, &bytes).unwrap(),
+                    oracle(spec, 0, &bytes)
+                );
                 assert_eq!(
                     block.evaluate(0, &bytes),
                     oracle(spec, 0, &bytes),
@@ -84,7 +95,9 @@ fn compiled_blocks_and_streaming_tails_match_independent_division() {
             let spec = CrcSpec::new(width, poly, 8, order).unwrap();
             let module = format!("c{i}_{j}");
             source += &format!("mod {module} {{ {} }}\n", spec.block16().unwrap().rust());
-            cases.push(format!("({width}, {poly}u64, {}, {module}::crc_update, {module}::crc_update_16, {module}::crc_update_bytes)", order == BitOrder::LsbFirst));
+            let rated = spec.block16().unwrap().operation_graph().rust().unwrap();
+            source += &format!("mod r_{module} {{ {rated} }}\n");
+            cases.push(format!("({width}, {poly}u64, {}, {module}::crc_update, {module}::crc_update_16, {module}::crc_update_bytes, r_{module}::crc_update_16)", order == BitOrder::LsbFirst));
         }
     }
     source += r#"
@@ -105,15 +118,16 @@ fn reference(width: u8, poly: u64, lsb: bool, mut crc: u64, bytes: &[u8]) -> u64
     crc
 }
 fn main() {
-    type Case=(u8,u64,bool,fn(u64,u64)->u64,fn(u64,&[u8;16])->u64,fn(u64,&[u8])->u64);
+    type Case=(u8,u64,bool,fn(u64,u64)->u64,fn(u64,&[u8;16])->u64,fn(u64,&[u8])->u64,fn(u64,&[u8;16])->u64);
     let cases:&[Case]=&[
 "#;
     source += &cases.join(",\n");
     source += r#"];
     let mut rng=0x9e3779b97f4a7c15u64;
     let bytes:Vec<u8>=(0..511).map(|_|{rng^=rng<<13;rng^=rng>>7;rng^=rng<<17;rng as u8}).collect();
-    for &(width,poly,lsb,byte,block,stream) in cases {
+    for &(width,poly,lsb,byte,block,stream,rated) in cases {
         for seed in [0,1,u64::MAX,0xfedcba9876543210] {
+            assert_eq!(rated(seed,bytes[..16].try_into().unwrap()),reference(width,poly,lsb,seed,&bytes[..16]));
             assert_eq!(block(seed,bytes[..16].try_into().unwrap()),reference(width,poly,lsb,seed,&bytes[..16]));
             for len in (0..=80).chain([127,128,129,255,256,257,511]) {
                 let input=&bytes[..len];

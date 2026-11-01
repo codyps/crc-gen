@@ -93,9 +93,10 @@ byte-update chain, but dense polynomials can produce larger, slower programs.
 Benchmark both alternatives on the target CPU; the slice helper selects blocks
 by input length, not by a claim that blocks always win.
 
-Block graphs are available through the library. Existing durable search jobs
-and their rankings continue to rate the specified scalar update dimensions;
-they do not store or rank the 128-bit block decomposition.
+Durable search jobs for native widths and 8-bit input updates also store the
+complete 16-byte block DAG and its ratings. Use `search rank --block16` for a
+separate 128-bit-update ranking and `search export --block16 --job N` to emit
+its exact recorded graph. Scalar rankings remain the default. See [SEARCH.md](SEARCH.md).
 
 ## Bit and polynomial conventions
 

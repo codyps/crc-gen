@@ -90,3 +90,42 @@ fn wide_and_non_byte_results_are_verified_and_serializable() {
         }
     }
 }
+
+#[test]
+fn block_ratings_and_historical_scalar_results_round_trip() {
+    let spec = CrcSpec::new(32, 0xe5, 8, BitOrder::MsbFirst).unwrap();
+    let evaluation = Evaluation::generate(spec).unwrap();
+    let block = evaluation.block16.as_ref().unwrap();
+    assert_eq!(block.graph.version, BLOCK_GRAPH_VERSION);
+    assert_eq!(
+        block.metrics,
+        block.graph.measure(&evaluation.model).unwrap()
+    );
+    let mut corrupted = evaluation.clone();
+    corrupted.block16.as_mut().unwrap().metrics.weighted_cost += 1;
+    assert!(corrupted.verify(spec).is_err());
+    let mut missing = evaluation.clone();
+    missing.block16 = None;
+    assert!(missing.verify(spec).is_err());
+    let mut old = serde_json::to_value(&evaluation).unwrap();
+    old.as_object_mut().unwrap().remove("block16");
+    old["optimizer"] = serde_json::json!("gf2-shift-fold-words-v2");
+    let historical: Evaluation = serde_json::from_value(old).unwrap();
+    assert!(historical.block16.is_none());
+    historical.verify(spec).unwrap();
+    let mut invalid = block.graph.clone();
+    let input = invalid
+        .nodes
+        .iter_mut()
+        .find(|n| matches!(n.op, Op::BlockWord { .. }))
+        .unwrap();
+    input.op = Op::BlockWord {
+        offset: 15,
+        width: 64,
+        reflected: false,
+    };
+    assert!(invalid.validate().is_err());
+    let mut invalid = block.graph.clone();
+    invalid.version = GRAPH_VERSION;
+    assert!(invalid.validate().is_err());
+}

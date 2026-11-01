@@ -8,13 +8,21 @@ use std::fmt::Write;
 
 pub type Result<T> = std::result::Result<T, String>;
 pub const GRAPH_VERSION: u32 = 1;
-pub const OPTIMIZER: &str = "gf2-shift-fold-words-v2";
+pub const BLOCK_GRAPH_VERSION: u32 = 2;
+pub const OPTIMIZER: &str = "gf2-shift-fold-words-and-block16-v3";
 
 #[derive(Clone, Debug, Eq, Ord, PartialEq, PartialOrd, Serialize, Deserialize)]
 #[serde(tag = "kind", content = "argument", rename_all = "snake_case")]
 pub enum Op {
     Crc,
     Data,
+    /// A native word loaded from the 16-byte input. Input loads have zero cost,
+    /// like Data/Crc; endian conversion and ISA load costs need a later model.
+    BlockWord {
+        offset: u8,
+        width: u8,
+        reflected: bool,
+    },
     Constant(u64),
     Xor,
     And(u64),
@@ -121,6 +129,7 @@ impl Builder {
         let input = |i: usize| self.possible_bits[inputs[i]];
         let possible = match op {
             Op::Crc | Op::Data => u64::MAX,
+            Op::BlockWord { width, .. } => low_mask(width),
             Op::Constant(v) => v,
             Op::And(mask) => input(0) & mask,
             Op::Shl(n) => input(0) << n,
@@ -460,9 +469,57 @@ pub(crate) fn linear_word_graph(width: u8, bits: u8, columns: &[u64]) -> Graph {
     best.unwrap().1
 }
 
+pub(crate) fn block_operation_graph(spec: CrcSpec, lanes: &[Graph]) -> Graph {
+    let mut b = Builder::default();
+    let crc = b.node(Op::Crc, vec![]);
+    let crc = b.and(crc, low_mask(spec.width()));
+    let mut values = Vec::new();
+    for i in 0..lanes.len() {
+        let word = b.node(
+            Op::BlockWord {
+                offset: i as u8 * (spec.width() / 8),
+                width: spec.width(),
+                reflected: spec.order() == BitOrder::LsbFirst,
+            },
+            vec![],
+        );
+        let word = if i == 0 {
+            b.node(Op::Xor, vec![crc, word])
+        } else {
+            word
+        };
+        let lane = &lanes[lanes.len() - 1 - i];
+        let mut remap = Vec::new();
+        for node in &lane.nodes {
+            let value = if node.op == Op::Data {
+                word
+            } else {
+                let inputs: Vec<_> = node.inputs.iter().map(|j| remap[*j]).collect();
+                match node.op {
+                    Op::And(mask) => b.and(inputs[0], mask),
+                    Op::Shl(n) => b.shift(inputs[0], i16::from(n)),
+                    Op::Shr(n) => b.shift(inputs[0], -i16::from(n)),
+                    _ => b.node(node.op.clone(), inputs),
+                }
+            };
+            remap.push(value);
+        }
+        values.push(remap[lane.output]);
+    }
+    while values.len() > 1 {
+        values = values
+            .chunks(2)
+            .map(|pair| b.node(Op::Xor, pair.to_vec()))
+            .collect();
+    }
+    let mut graph = b.finish(values[0]);
+    graph.version = BLOCK_GRAPH_VERSION;
+    graph
+}
+
 impl Graph {
     pub fn validate(&self) -> Result<()> {
-        if self.version != GRAPH_VERSION {
+        if !matches!(self.version, GRAPH_VERSION | BLOCK_GRAPH_VERSION) {
             return Err("unsupported graph version".into());
         }
         if self.nodes.is_empty() || self.output >= self.nodes.len() {
@@ -471,7 +528,7 @@ impl Graph {
         let mut possible_bits = Vec::<u64>::with_capacity(self.nodes.len());
         for (i, node) in self.nodes.iter().enumerate() {
             let arity = match node.op {
-                Op::Crc | Op::Data | Op::Constant(_) => 0,
+                Op::Crc | Op::Data | Op::Constant(_) | Op::BlockWord { .. } => 0,
                 Op::And(_) | Op::Shl(_) | Op::Shr(_) => 1,
                 Op::Xor | Op::Or => 2,
             };
@@ -481,9 +538,21 @@ impl Graph {
             if matches!(node.op, Op::Shl(n) | Op::Shr(n) if n >= 64) {
                 return Err("shift must be below 64".into());
             }
+            if let Op::BlockWord { offset, width, .. } = node.op {
+                if self.version != BLOCK_GRAPH_VERSION
+                    || !matches!(width, 8 | 16 | 32 | 64)
+                    || u16::from(offset) + u16::from(width / 8) > 16
+                {
+                    return Err("invalid block-word input".into());
+                }
+            }
+            if self.version == BLOCK_GRAPH_VERSION && node.op == Op::Data {
+                return Err("block graphs must use explicit block-word inputs".into());
+            }
             let input = |i: usize| possible_bits[node.inputs[i]];
             let bits = match node.op {
                 Op::Crc | Op::Data => u64::MAX,
+                Op::BlockWord { width, .. } => low_mask(width),
                 Op::Constant(value) => value,
                 Op::And(mask) => input(0) & mask,
                 Op::Shl(n) => input(0) << n,
@@ -512,13 +581,30 @@ impl Graph {
         Ok(())
     }
 
-    fn eval_unchecked(&self, crc: u64, data: u64) -> u64 {
+    fn eval_inputs(&self, crc: u64, data: u64, block: &[u8; 16]) -> u64 {
         let mut values = Vec::<u64>::with_capacity(self.nodes.len());
         for node in &self.nodes {
             let input = |i: usize| values[node.inputs[i]];
             let value = match node.op {
                 Op::Crc => crc,
                 Op::Data => data,
+                Op::BlockWord {
+                    offset,
+                    width,
+                    reflected,
+                } => {
+                    let bytes = usize::from(width / 8);
+                    let mut value = 0;
+                    for j in 0..bytes {
+                        let shift = if reflected {
+                            j * 8
+                        } else {
+                            (bytes - 1 - j) * 8
+                        };
+                        value |= u64::from(block[usize::from(offset) + j]) << shift;
+                    }
+                    value
+                }
                 Op::Constant(value) => value,
                 Op::Xor => input(0) ^ input(1),
                 Op::And(mask) => input(0) & mask,
@@ -531,9 +617,24 @@ impl Graph {
         values[self.output]
     }
 
+    fn eval_unchecked(&self, crc: u64, data: u64) -> u64 {
+        self.eval_inputs(crc, data, &[0; 16])
+    }
+
     pub fn evaluate(&self, crc: u64, data: u64) -> Result<u64> {
         self.validate()?;
+        if self.version != GRAPH_VERSION {
+            return Err("block graph requires 16-byte input".into());
+        }
         Ok(self.eval_unchecked(crc, data))
+    }
+
+    pub fn evaluate_block(&self, crc: u64, block: &[u8; 16]) -> Result<u64> {
+        self.validate()?;
+        if self.version != BLOCK_GRAPH_VERSION {
+            return Err("scalar graph requires scalar input".into());
+        }
+        Ok(self.eval_inputs(crc, 0, block))
     }
 
     pub fn measure(&self, model: &CostModel) -> Result<Metrics> {
@@ -589,13 +690,34 @@ impl Graph {
 
     pub fn rust(&self) -> Result<String> {
         self.validate()?;
-        let mut code =
-            "#[allow(unused_variables)]\npub fn crc_update(crc: u64, data: u64) -> u64 {\n"
-                .to_string();
+        let signature = if self.version == BLOCK_GRAPH_VERSION {
+            "pub fn crc_update_16(crc: u64, block: &[u8; 16]) -> u64"
+        } else {
+            "pub fn crc_update(crc: u64, data: u64) -> u64"
+        };
+        let mut code = format!("#[allow(unused_variables)]\n{signature} {{\n");
         for (i, node) in self.nodes.iter().enumerate() {
             let value = match node.op {
                 Op::Crc => "crc".into(),
                 Op::Data => "data".into(),
+                Op::BlockWord {
+                    offset,
+                    width,
+                    reflected,
+                } => {
+                    if width == 8 {
+                        format!("block[{offset}] as u64")
+                    } else {
+                        let indexes = (offset..offset + width / 8)
+                            .map(|j| format!("block[{j}]"))
+                            .collect::<Vec<_>>()
+                            .join(", ");
+                        format!(
+                            "u{width}::from_{}_bytes([{indexes}]) as u64",
+                            if reflected { "le" } else { "be" }
+                        )
+                    }
+                }
                 Op::Constant(v) => format!("{v}u64"),
                 Op::And(mask) => format!("v{} & {mask}u64", node.inputs[0]),
                 Op::Shl(n) => format!("v{} << {n}", node.inputs[0]),
@@ -636,6 +758,9 @@ pub struct Evaluation {
     pub canonical_xors: usize,
     pub factored_xors: usize,
     pub variants: Vec<Variant>,
+    /// Separate 128-bit update; never compared directly to scalar variants.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub block16: Option<Variant>,
 }
 
 pub fn order_name(order: BitOrder) -> &'static str {
@@ -709,6 +834,17 @@ impl Evaluation {
             canonical_xors: equations.xor_count(),
             factored_xors: factored.xor_count(),
             variants,
+            block16: if spec.data_bits() == 8 && matches!(spec.width(), 8 | 16 | 32 | 64) {
+                let graph = spec.block16().map_err(|e| e.to_string())?.operation_graph();
+                let metrics = graph.measure(&CostModel::default())?;
+                Some(Variant {
+                    name: "block16-words".into(),
+                    graph,
+                    metrics,
+                })
+            } else {
+                None
+            },
         };
         result.verify(spec)?;
         Ok(result)
@@ -725,8 +861,44 @@ impl Evaluation {
         {
             return Err("result metadata does not match task/version".into());
         }
+        let eligible = spec.data_bits() == 8 && matches!(spec.width(), 8 | 16 | 32 | 64);
+        if self.optimizer == OPTIMIZER && eligible != self.block16.is_some() {
+            return Err("current optimizer result is missing/unexpected block rating".into());
+        }
+        if let Some(block) = &self.block16 {
+            if !eligible || block.graph.version != BLOCK_GRAPH_VERSION {
+                return Err("block result dimensions/version disagree".into());
+            }
+            block.graph.validate()?;
+            if block.graph.measure(&self.model)? != block.metrics {
+                return Err("stored block metrics disagree with graph".into());
+            }
+            let check = |crc, bytes: &[u8; 16]| {
+                let mut expected = crc;
+                for byte in bytes {
+                    expected = reference(spec, expected, u64::from(*byte));
+                }
+                if block.graph.eval_inputs(crc, 0, bytes) != expected {
+                    return Err("block graph failed polynomial-division verification".to_string());
+                }
+                Ok(())
+            };
+            check(0, &[0; 16])?;
+            for bit in 0..64 {
+                check(1u64 << bit, &[0; 16])?;
+            }
+            for bit in 0..128 {
+                let mut bytes = [0; 16];
+                bytes[bit / 8] = 1 << (bit % 8);
+                check(0, &bytes)?;
+            }
+            check(u64::MAX, &[u8::MAX; 16])?;
+        }
         for variant in &self.variants {
             variant.graph.validate()?;
+            if variant.graph.version != GRAPH_VERSION {
+                return Err("scalar variant uses block graph".into());
+            }
             if variant.graph.measure(&self.model)? != variant.metrics {
                 return Err("stored metrics disagree with graph".into());
             }

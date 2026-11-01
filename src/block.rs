@@ -50,6 +50,12 @@ impl CrcSpec {
 }
 
 impl Block16 {
+    /// Complete 128-bit DAG including input words, seed mixing and XOR reduction.
+    /// Input loads cost zero in the initial word-operation model.
+    pub fn operation_graph(&self) -> Graph {
+        crate::rating::block_operation_graph(self.spec, &self.lanes)
+    }
+
     /// Advance matrices in increasing powers, for inspection and word-op ratings.
     pub fn lane_graphs(&self) -> &[Graph] {
         &self.lanes

@@ -444,6 +444,8 @@ struct Summary {
     variant: usize,
     metrics: Metrics,
     model: CostModel,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    block16_metrics: Option<Metrics>,
 }
 
 fn encode(evaluation: &Evaluation) -> Result<(Vec<u8>, String, Summary)> {
@@ -459,6 +461,7 @@ fn encode(evaluation: &Evaluation) -> Result<(Vec<u8>, String, Summary)> {
             variant,
             metrics,
             model: evaluation.model.clone(),
+            block16_metrics: evaluation.block16.as_ref().map(|v| v.metrics.clone()),
         },
     ))
 }
@@ -632,6 +635,7 @@ pub fn run(path: &Path, manifest: &Manifest, opts: &RunOptions) -> Result<Status
 
 #[derive(Default)]
 pub struct RankOptions {
+    pub block16: bool,
     pub width: Option<u8>,
     pub bits: Option<u8>,
     pub order: Option<String>,
@@ -646,13 +650,15 @@ pub struct Ranked {
     pub candidate: Candidate,
     pub data_bits: u8,
     pub order: String,
-    pub variant: usize,
+    pub variant: Option<usize>,
+    pub method: String,
     pub variant_name: String,
     pub metrics: Metrics,
 }
 
 #[derive(Serialize)]
 pub struct RankGroup {
+    pub method: String,
     pub width: u8,
     pub data_bits: u8,
     pub order: String,
@@ -676,13 +682,15 @@ pub fn rank(
     }
     let conn = existing(path, false)?;
     let id = choose_run(&conn, run)?;
+    let method = if opts.block16 { "block16" } else { "scalar" };
     let mut groups = BTreeMap::<(u8, u8, String), Vec<Ranked>>::new();
     let mut statement = conn.prepare("SELECT ordinal,candidate,data_bits,bit_order,summary FROM jobs WHERE run_id=?1 AND state='done' ORDER BY ordinal")?;
     let mut rows = statement.query([&id])?;
     while let Some(row) = rows.next()? {
         let ordinal = row.get(0)?;
         let candidate: Candidate = serde_json::from_str(&row.get::<_, String>(1)?)?;
-        let bits = row.get(2)?;
+        let scalar_bits: u8 = row.get(2)?;
+        let bits = if opts.block16 { 128 } else { scalar_bits };
         let order: String = row.get(3)?;
         if opts.width.is_some_and(|v| v != candidate.width)
             || opts.bits.is_some_and(|v| v != bits)
@@ -694,19 +702,38 @@ pub fn rank(
             continue;
         }
         let summary: Summary = serde_json::from_str(&row.get::<_, String>(4)?)?;
-        let (variant, metrics) = if model == &summary.model {
-            (summary.variant, summary.metrics)
+        let (variant, metrics) = if opts.block16 {
+            let Some(metrics) = summary.block16_metrics else {
+                continue;
+            };
+            let metrics = if model == &summary.model {
+                metrics
+            } else {
+                load_with(&conn, &id, ordinal)?
+                    .block16
+                    .ok_or("missing block graph")?
+                    .graph
+                    .measure(model)?
+            };
+            (None, metrics)
         } else {
-            load_with(&conn, &id, ordinal)?.best(model)?
+            let (variant, metrics) = if model == &summary.model {
+                (summary.variant, summary.metrics)
+            } else {
+                load_with(&conn, &id, ordinal)?.best(model)?
+            };
+            (Some(variant), metrics)
         };
-        let key = (candidate.width, bits, order.clone());
-        let entries = groups.entry(key).or_default();
+        let entries = groups
+            .entry((candidate.width, bits, order.clone()))
+            .or_default();
         entries.push(Ranked {
             ordinal,
             candidate,
             data_bits: bits,
             order,
             variant,
+            method: method.into(),
             variant_name: String::new(),
             metrics,
         });
@@ -717,13 +744,24 @@ pub fn rank(
     for ((width, data_bits, order), mut entries) in groups {
         for entry in &mut entries {
             let evaluation = load_with(&conn, &id, entry.ordinal)?;
-            let (variant, metrics) = evaluation.best(model)?;
+            let (variant, metrics, name) = if opts.block16 {
+                let block = evaluation.block16.ok_or("missing block graph")?;
+                (None, block.graph.measure(model)?, block.name)
+            } else {
+                let (index, metrics) = evaluation.best(model)?;
+                (
+                    Some(index),
+                    metrics,
+                    evaluation.variants[index].name.clone(),
+                )
+            };
             if variant != entry.variant || metrics != entry.metrics {
                 return Err("cached ranking disagrees with verified result".into());
             }
-            entry.variant_name = evaluation.variants[variant].name.clone();
+            entry.variant_name = name;
         }
         result.push(RankGroup {
+            method: method.into(),
             width,
             data_bits,
             order,
@@ -783,6 +821,7 @@ pub fn verify(path: &Path, run: Option<&str>) -> Result<usize> {
             if variant != summary.variant
                 || metrics != summary.metrics
                 || summary.model != result.model
+                || summary.block16_metrics != result.block16.as_ref().map(|v| v.metrics.clone())
             {
                 return Err("cached summary disagrees with result".into());
             }

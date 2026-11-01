@@ -32,6 +32,7 @@ enum Format {
     Rust,
     WordRust,
     BlockRust,
+    PclmulRust,
 }
 
 struct Options {
@@ -111,6 +112,7 @@ fn parse(args: impl Iterator<Item = String>) -> Result<Option<Options>, String> 
                     Some("rust") => Format::Rust,
                     Some("word-rust") => Format::WordRust,
                     Some("block-rust") => Format::BlockRust,
+                    Some("pclmul-rust") => Format::PclmulRust,
                     Some(other) => return Err(format!("unknown output format: {other}")),
                     None => return Err("--format requires a value".into()),
                 };
@@ -163,6 +165,7 @@ fn run() -> Result<(), String> {
         Format::Equations => program.unwrap().equations(),
         Format::Rust => program.unwrap().rust(),
         Format::WordRust => simplified.word_rust(),
+        Format::PclmulRust => options.spec.pclmul().map_err(|e| e.to_string())?.rust(),
         Format::BlockRust => options.spec.block16().map_err(|e| e.to_string())?.rust(),
     };
     output

@@ -44,6 +44,7 @@ Output formats:
 | `rust` | A standalone `crc_update(crc: u64, data: u64) -> u64` using factored bits |
 | `word-rust` | A Rust update using masked words and shared shift/XOR feedback folds |
 | `block-rust` | Byte, 16-byte block, and arbitrary-slice Rust updates without tables |
+| `pclmul-rust` | Scalar fallback, x86-64 PCLMUL/VPCLMUL updates, and safe runtime dispatch |
 
 `--stats` writes operation counts to stderr, keeping generated code on stdout.
 Raw counts measure shared DAG nodes; canonical and factored counts measure binary
@@ -97,6 +98,56 @@ Durable search jobs for native widths and 8-bit input updates also store the
 complete 16-byte block DAG and its ratings. Use `search rank --block16` for a
 separate 128-bit-update ranking and `search export --block16 --job N` to emit
 its exact recorded graph. Scalar rankings remain the default. See [SEARCH.md](SEARCH.md).
+
+## PCLMUL and VPCLMUL byte streams
+
+```sh
+cargo run --release -- 0xe5 --width 32 --msb-first --format pclmul-rust > update.rs
+```
+
+The generator API is `spec.pclmul()?.rust()`, with `constants()` available for
+inspection. All widths 1 through 64, both bit orders, and arbitrary polynomials
+(including even and zero polynomials) are supported. Input must be byte-sized
+(`--data-bits 8`). The generated Rust requires Rust 1.89 or newer and `std` for
+runtime feature detection; it has no crate dependencies.
+
+- `crc_update_bytes(crc, bytes)` is safe. On x86-64 it checks CPU/OS features and
+  selects VPCLMUL-512 from 64 bytes, VPCLMUL-256 from 32 bytes, or PCLMUL from
+  16 bytes. Short inputs, unsupported CPUs and other targets use scalar code.
+- `crc_update_bytes_scalar(crc, bytes)` always uses the word simplifier.
+- On x86-64, `crc_update_bytes_pclmul`, `crc_update_bytes_vpclmul256`, and
+  `crc_update_bytes_vpclmul512` are **unsafe** entry points for separate benchmarking
+  or callers that already checked features. Their corresponding `*_available()`
+  helpers check CPU/OS support. Calling an unsupported entry point is unsound,
+  even when the input is short. Target features stay within those functions;
+  callers need not compile their whole program for AVX or PCLMUL.
+
+All functions update a raw register in the same convention as `word-rust`,
+mask unused seed bits even for empty input, and accept arbitrary slice alignment.
+They perform no overreads. Initialization, final reflection and final XOR remain
+caller-managed. Direct hardware functions use narrower paths for short inputs;
+all process trailing bytes with the scalar update. Minimum dispatch lengths are
+implementation boundaries, not universal performance crossover claims. Benchmark
+on the intended CPU and message sizes.
+
+The PCLMUL path uses four independent 128-bit streams for long inputs. VPCLMUL
+uses two or four 128-bit lanes in 256- or 512-bit vectors. Normal-order conversion
+uses byte shuffles; LSB-first input additionally reverses bits within bytes using
+register shuffles. Folding needs no data-dependent memory lookups.
+
+Constants are derived by polynomial division. For width w, the internal modulus
+is `D = G * x^(64-w)`, a monic degree-64 polynomial. The normal-order raw CRC is
+shifted left by `64-w`. This lets all CRC widths share the same folding and exact
+reduction sequence. A fold across k bits computes
+`clmul(low64(A), x^k mod D) XOR clmul(high64(A), x^(k+64) mod D) XOR B`.
+The final stage advances by 64 bits and uses the reciprocal `floor(x^128 / D)`
+to reduce to a 64-bit remainder, then converts back to the original register.
+The generator contains no unsafe code; only the emitted, feature-gated intrinsic
+functions use unsafe operations.
+
+Hardware programs are not included in the portable word-operation DAG ratings.
+Existing search results remain readable; source fingerprints include both the
+backend and its template so runs from different generators cannot be mixed.
 
 ## Bit and polynomial conventions
 

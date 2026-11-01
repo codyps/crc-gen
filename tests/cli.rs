@@ -16,6 +16,7 @@ fn output_formats_and_stats() {
         ("rust", "pub fn crc_update("),
         ("word-rust", "pub fn crc_update("),
         ("block-rust", "pub fn crc_update_16("),
+        ("pclmul-rust", "pub unsafe fn crc_update_bytes_pclmul("),
     ] {
         for order in ["--msb-first", "--lsb-first"] {
             let output = run(&["0x10_21", order, "--format", format, "--stats"]);
@@ -53,6 +54,7 @@ fn reject_invalid_arguments_without_panicking() {
         vec!["--format", "bogus"],
         vec!["--format"],
         vec!["--unknown"],
+        vec!["--data-bits", "16", "--format", "pclmul-rust"],
         vec!["--width", "24", "--format", "block-rust"],
         vec!["--data-bits", "16", "--format", "block-rust"],
     ] {

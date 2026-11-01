@@ -1,0 +1,342 @@
+/// Raw byte-stream update, always portable and table-free.
+pub fn crc_update_bytes_scalar(mut crc: u64, bytes: &[u8]) -> u64 {
+    crc &= u64::MAX >> (64 - @WIDTH@);
+    for &byte in bytes {
+        crc = crc_update(crc, byte as u64);
+    }
+    crc
+}
+
+/// Safe runtime dispatch. Initial/final reflection and XOR are caller-managed.
+/// Unsupported CPUs/targets and inputs shorter than 16 bytes use scalar code.
+pub fn crc_update_bytes(crc: u64, bytes: &[u8]) -> u64 {
+    #[cfg(target_arch = "x86_64")]
+    {
+        if bytes.len() >= 64 && vpclmul512_available() {
+            // SAFETY: detection includes CPU features and OS vector-state support.
+            return unsafe { crc_update_bytes_vpclmul512(crc, bytes) };
+        }
+        if bytes.len() >= 32 && vpclmul256_available() {
+            return unsafe { crc_update_bytes_vpclmul256(crc, bytes) };
+        }
+        if bytes.len() >= 16 && pclmul_available() {
+            return unsafe { crc_update_bytes_pclmul(crc, bytes) };
+        }
+    }
+    crc_update_bytes_scalar(crc, bytes)
+}
+
+pub fn pclmul_available() -> bool {
+    #[cfg(target_arch = "x86_64")]
+    {
+        return std::is_x86_feature_detected!("pclmulqdq")
+            && std::is_x86_feature_detected!("ssse3");
+    }
+    #[cfg(not(target_arch = "x86_64"))]
+    {
+        false
+    }
+}
+pub fn vpclmul256_available() -> bool {
+    #[cfg(target_arch = "x86_64")]
+    {
+        return pclmul_available()
+            && std::is_x86_feature_detected!("vpclmulqdq")
+            && std::is_x86_feature_detected!("avx2");
+    }
+    #[cfg(not(target_arch = "x86_64"))]
+    {
+        false
+    }
+}
+pub fn vpclmul512_available() -> bool {
+    #[cfg(target_arch = "x86_64")]
+    {
+        return pclmul_available()
+            && std::is_x86_feature_detected!("vpclmulqdq")
+            && std::is_x86_feature_detected!("avx512f")
+            && std::is_x86_feature_detected!("avx512bw");
+    }
+    #[cfg(not(target_arch = "x86_64"))]
+    {
+        false
+    }
+}
+
+#[cfg(target_arch = "x86_64")]
+use core::arch::x86_64::*;
+
+// Convert each memory block to normal polynomial order. LSB-first streams
+// reverse bits within each byte as well as byte order within a 128-bit lane.
+#[cfg(target_arch = "x86_64")]
+#[target_feature(enable = "ssse3")]
+unsafe fn clmul_load(p: *const u8) -> __m128i {
+    // SAFETY: caller provides at least 16 readable bytes.
+    let v = unsafe { _mm_loadu_si128(p.cast()) };
+    let v = if @REFLECTED@ {
+        let lut = _mm_setr_epi8(0, 8, 4, 12, 2, 10, 6, 14, 1, 9, 5, 13, 3, 11, 7, 15);
+        let mask = _mm_set1_epi8(15);
+        let lo = _mm_and_si128(v, mask);
+        let hi = _mm_and_si128(_mm_srli_epi16::<4>(v), mask);
+        _mm_or_si128(
+            _mm_slli_epi16::<4>(_mm_shuffle_epi8(lut, lo)),
+            _mm_shuffle_epi8(lut, hi),
+        )
+    } else {
+        v
+    };
+    _mm_shuffle_epi8(
+        v,
+        _mm_setr_epi8(15, 14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1, 0),
+    )
+}
+
+#[cfg(target_arch = "x86_64")]
+#[target_feature(enable = "pclmulqdq")]
+unsafe fn clmul_fold(a: __m128i, b: __m128i, k: __m128i) -> __m128i {
+    _mm_xor_si128(
+        b,
+        _mm_xor_si128(
+            _mm_clmulepi64_si128::<0x00>(a, k),
+            _mm_clmulepi64_si128::<0x11>(a, k),
+        ),
+    )
+}
+
+#[cfg(target_arch = "x86_64")]
+#[target_feature(enable = "avx2")]
+unsafe fn clmul_load256(p: *const u8) -> __m256i {
+    // SAFETY: caller provides at least 32 readable bytes.
+    let v = unsafe { _mm256_loadu_si256(p.cast()) };
+    let v = if @REFLECTED@ {
+        let lut = _mm256_broadcastsi128_si256(_mm_setr_epi8(
+            0, 8, 4, 12, 2, 10, 6, 14, 1, 9, 5, 13, 3, 11, 7, 15,
+        ));
+        let mask = _mm256_set1_epi8(15);
+        let lo = _mm256_and_si256(v, mask);
+        let hi = _mm256_and_si256(_mm256_srli_epi16::<4>(v), mask);
+        _mm256_or_si256(
+            _mm256_slli_epi16::<4>(_mm256_shuffle_epi8(lut, lo)),
+            _mm256_shuffle_epi8(lut, hi),
+        )
+    } else {
+        v
+    };
+    _mm256_shuffle_epi8(
+        v,
+        _mm256_broadcastsi128_si256(_mm_setr_epi8(
+            15, 14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1, 0,
+        )),
+    )
+}
+
+#[cfg(target_arch = "x86_64")]
+#[target_feature(enable = "avx512f,avx512bw")]
+unsafe fn clmul_load512(p: *const u8) -> __m512i {
+    // SAFETY: caller provides at least 64 readable bytes.
+    let v = unsafe { _mm512_loadu_si512(p.cast()) };
+    let v = if @REFLECTED@ {
+        let lut = _mm512_broadcast_i32x4(_mm_setr_epi8(
+            0, 8, 4, 12, 2, 10, 6, 14, 1, 9, 5, 13, 3, 11, 7, 15,
+        ));
+        let mask = _mm512_set1_epi8(15);
+        let lo = _mm512_and_si512(v, mask);
+        let hi = _mm512_and_si512(_mm512_srli_epi16::<4>(v), mask);
+        _mm512_or_si512(
+            _mm512_slli_epi16::<4>(_mm512_shuffle_epi8(lut, lo)),
+            _mm512_shuffle_epi8(lut, hi),
+        )
+    } else {
+        v
+    };
+    _mm512_shuffle_epi8(
+        v,
+        _mm512_broadcast_i32x4(_mm_setr_epi8(
+            15, 14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1, 0,
+        )),
+    )
+}
+
+#[cfg(target_arch = "x86_64")]
+fn clmul_seed(crc: u64) -> u64 {
+    let crc = crc & (u64::MAX >> (64 - @WIDTH@));
+    if @REFLECTED@ {
+        crc.reverse_bits()
+    } else {
+        crc << (64 - @WIDTH@)
+    }
+}
+
+// Advance by 64 bits, then exactly reduce modulo D=G*x^(64-width).
+// q = high64(A) XOR high64(clmul(high64(A), reciprocal_low)).
+// rem(A,D) = low64(A) XOR low64(clmul(q,D_low)). No data tables.
+#[cfg(target_arch = "x86_64")]
+#[target_feature(enable = "pclmulqdq")]
+unsafe fn clmul_finish(a: __m128i) -> u64 {
+    // SAFETY: this function requires the target features; each load is length-checked.
+    unsafe {
+        let k = _mm_set_epi64x(@X128@u64 as i64, @X64@u64 as i64);
+        let a = clmul_fold(a, _mm_setzero_si128(), k);
+        let hi = _mm_srli_si128::<8>(a);
+        let mu = _mm_set_epi64x(0, @RECIPROCAL@u64 as i64);
+        let q = _mm_xor_si128(
+            hi,
+            _mm_srli_si128::<8>(_mm_clmulepi64_si128::<0x00>(hi, mu)),
+        );
+        let d = _mm_set_epi64x(0, @POLYNOMIAL@u64 as i64);
+        let r = _mm_cvtsi128_si64(_mm_xor_si128(a, _mm_clmulepi64_si128::<0x00>(q, d))) as u64;
+        if @REFLECTED@ {
+            r.reverse_bits()
+        } else {
+            r >> (64 - @WIDTH@)
+        }
+    }
+}
+
+/// PCLMUL with four independent 128-bit streams for long buffers.
+/// # Safety
+/// CPU must support PCLMULQDQ and SSSE3. Use pclmul_available() first.
+#[cfg(target_arch = "x86_64")]
+#[target_feature(enable = "pclmulqdq,ssse3")]
+pub unsafe fn crc_update_bytes_pclmul(crc: u64, bytes: &[u8]) -> u64 {
+    // SAFETY: this function requires the target features; each load is length-checked.
+    unsafe {
+        if bytes.len() < 16 {
+            return crc_update_bytes_scalar(crc, bytes);
+        }
+        let seed = _mm_set_epi64x(clmul_seed(crc) as i64, 0);
+        let k128 = _mm_set_epi64x(@X192@u64 as i64, @X128@u64 as i64);
+        let mut i;
+        let mut a;
+        if bytes.len() >= 64 {
+            let k512 = _mm_set_epi64x(@X576@u64 as i64, @X512@u64 as i64);
+            let mut a0 = _mm_xor_si128(clmul_load(bytes.as_ptr()), seed);
+            let mut a1 = clmul_load(bytes.as_ptr().add(16));
+            let mut a2 = clmul_load(bytes.as_ptr().add(32));
+            let mut a3 = clmul_load(bytes.as_ptr().add(48));
+            i = 64;
+            while bytes.len() - i >= 64 {
+                a0 = clmul_fold(a0, clmul_load(bytes.as_ptr().add(i)), k512);
+                a1 = clmul_fold(a1, clmul_load(bytes.as_ptr().add(i + 16)), k512);
+                a2 = clmul_fold(a2, clmul_load(bytes.as_ptr().add(i + 32)), k512);
+                a3 = clmul_fold(a3, clmul_load(bytes.as_ptr().add(i + 48)), k512);
+                i += 64;
+            }
+            let k256 = _mm_set_epi64x(@X320@u64 as i64, @X256@u64 as i64);
+            a0 = clmul_fold(a0, a2, k256);
+            a1 = clmul_fold(a1, a3, k256);
+            a = clmul_fold(a0, a1, k128);
+        } else {
+            a = _mm_xor_si128(clmul_load(bytes.as_ptr()), seed);
+            i = 16;
+        }
+        while bytes.len() - i >= 16 {
+            a = clmul_fold(a, clmul_load(bytes.as_ptr().add(i)), k128);
+            i += 16;
+        }
+        crc_update_bytes_scalar(clmul_finish(a), &bytes[i..])
+    }
+}
+
+/// VPCLMUL using two independent 128-bit lanes per 256-bit vector.
+/// # Safety
+/// CPU/OS must support PCLMULQDQ, SSSE3, AVX2 and VPCLMULQDQ.
+/// Use vpclmul256_available() first.
+#[cfg(target_arch = "x86_64")]
+#[target_feature(enable = "pclmulqdq,ssse3,avx2,vpclmulqdq")]
+pub unsafe fn crc_update_bytes_vpclmul256(crc: u64, bytes: &[u8]) -> u64 {
+    // SAFETY: this function requires the target features; each load is length-checked.
+    unsafe {
+        if bytes.len() < 32 {
+            return crc_update_bytes_pclmul(crc, bytes);
+        }
+        let load = |p| clmul_load256(p);
+        let k128 = _mm_set_epi64x(@X192@u64 as i64, @X128@u64 as i64);
+        let k256 = _mm256_set_epi64x(
+            @X320@u64 as i64,
+            @X256@u64 as i64,
+            @X320@u64 as i64,
+            @X256@u64 as i64,
+        );
+        let seed = _mm256_set_epi64x(0, 0, clmul_seed(crc) as i64, 0);
+        let mut a = _mm256_xor_si256(load(bytes.as_ptr()), seed);
+        let mut i = 32;
+        while bytes.len() - i >= 32 {
+            a = _mm256_xor_si256(
+                load(bytes.as_ptr().add(i)),
+                _mm256_xor_si256(
+                    _mm256_clmulepi64_epi128::<0x00>(a, k256),
+                    _mm256_clmulepi64_epi128::<0x11>(a, k256),
+                ),
+            );
+            i += 32;
+        }
+        let mut a = clmul_fold(
+            _mm256_castsi256_si128(a),
+            _mm256_extracti128_si256::<1>(a),
+            k128,
+        );
+        if bytes.len() - i >= 16 {
+            a = clmul_fold(a, clmul_load(bytes.as_ptr().add(i)), k128);
+            i += 16;
+        }
+        crc_update_bytes_scalar(clmul_finish(a), &bytes[i..])
+    }
+}
+
+/// VPCLMUL using four independent 128-bit lanes per 512-bit vector.
+/// # Safety
+/// CPU/OS must support PCLMULQDQ, SSSE3, VPCLMULQDQ, AVX512F and AVX512BW.
+/// Use vpclmul512_available() first.
+#[cfg(target_arch = "x86_64")]
+#[target_feature(enable = "pclmulqdq,ssse3,vpclmulqdq,avx512f,avx512bw")]
+pub unsafe fn crc_update_bytes_vpclmul512(crc: u64, bytes: &[u8]) -> u64 {
+    // SAFETY: this function requires the target features; each load is length-checked.
+    unsafe {
+        if bytes.len() < 64 {
+            return crc_update_bytes_pclmul(crc, bytes);
+        }
+        let load = |p| clmul_load512(p);
+        let k512 = _mm512_set_epi64(
+            @X576@u64 as i64,
+            @X512@u64 as i64,
+            @X576@u64 as i64,
+            @X512@u64 as i64,
+            @X576@u64 as i64,
+            @X512@u64 as i64,
+            @X576@u64 as i64,
+            @X512@u64 as i64,
+        );
+        let seed = _mm512_set_epi64(0, 0, 0, 0, 0, 0, clmul_seed(crc) as i64, 0);
+        let mut a = _mm512_xor_si512(load(bytes.as_ptr()), seed);
+        let mut i = 64;
+        while bytes.len() - i >= 64 {
+            a = _mm512_xor_si512(
+                load(bytes.as_ptr().add(i)),
+                _mm512_xor_si512(
+                    _mm512_clmulepi64_epi128::<0x00>(a, k512),
+                    _mm512_clmulepi64_epi128::<0x11>(a, k512),
+                ),
+            );
+            i += 64;
+        }
+        let k256 = _mm_set_epi64x(@X320@u64 as i64, @X256@u64 as i64);
+        let k128 = _mm_set_epi64x(@X192@u64 as i64, @X128@u64 as i64);
+        let a0 = clmul_fold(
+            _mm512_castsi512_si128(a),
+            _mm512_extracti32x4_epi32::<2>(a),
+            k256,
+        );
+        let a1 = clmul_fold(
+            _mm512_extracti32x4_epi32::<1>(a),
+            _mm512_extracti32x4_epi32::<3>(a),
+            k256,
+        );
+        let mut a = clmul_fold(a0, a1, k128);
+        while bytes.len() - i >= 16 {
+            a = clmul_fold(a, clmul_load(bytes.as_ptr().add(i)), k128);
+            i += 16;
+        }
+        crc_update_bytes_scalar(clmul_finish(a), &bytes[i..])
+    }
+}

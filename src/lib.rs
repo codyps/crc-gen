@@ -23,6 +23,7 @@ use std::fmt::{self, Write};
 
 pub mod block;
 pub mod catalogue;
+pub mod pclmul;
 pub mod rating;
 pub mod search;
 

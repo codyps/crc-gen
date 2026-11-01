@@ -8,7 +8,7 @@ use std::fmt::Write;
 
 pub type Result<T> = std::result::Result<T, String>;
 pub const GRAPH_VERSION: u32 = 1;
-pub const OPTIMIZER: &str = "gf2-pairs-and-diagonal-words-v1";
+pub const OPTIMIZER: &str = "gf2-shift-fold-words-v2";
 
 #[derive(Clone, Debug, Eq, Ord, PartialEq, PartialOrd, Serialize, Deserialize)]
 #[serde(tag = "kind", content = "argument", rename_all = "snake_case")]
@@ -105,6 +105,7 @@ pub struct Metrics {
 struct Builder {
     nodes: Vec<Node>,
     intern: BTreeMap<(Op, Vec<usize>), usize>,
+    possible_bits: Vec<u64>,
 }
 
 impl Builder {
@@ -117,7 +118,17 @@ impl Builder {
             return *id;
         }
         let id = self.nodes.len();
+        let input = |i: usize| self.possible_bits[inputs[i]];
+        let possible = match op {
+            Op::Crc | Op::Data => u64::MAX,
+            Op::Constant(v) => v,
+            Op::And(mask) => input(0) & mask,
+            Op::Shl(n) => input(0) << n,
+            Op::Shr(n) => input(0) >> n,
+            Op::Xor | Op::Or => input(0) | input(1),
+        };
         self.nodes.push(Node { op, inputs });
+        self.possible_bits.push(possible);
         self.intern.insert(key, id);
         id
     }
@@ -125,7 +136,7 @@ impl Builder {
         self.node(Op::Constant(v), vec![])
     }
     fn shift(&mut self, input: usize, amount: i16) -> usize {
-        if amount == 0 {
+        if amount == 0 || self.possible_bits[input] == 0 {
             input
         } else if amount > 0 {
             self.node(Op::Shl(amount as u8), vec![input])
@@ -134,16 +145,20 @@ impl Builder {
         }
     }
     fn and(&mut self, input: usize, mask: u64) -> usize {
-        if mask == 0 {
+        if self.possible_bits[input] & mask == 0 {
             self.constant(0)
-        } else if mask == u64::MAX {
+        } else if self.possible_bits[input] & !mask == 0 {
             input
         } else {
             self.node(Op::And(mask), vec![input])
         }
     }
     fn xor_sum(&mut self, terms: Vec<usize>) -> usize {
-        let mut terms = terms.into_iter();
+        let mut terms = terms
+            .into_iter()
+            .filter(|id| self.possible_bits[*id] != 0)
+            .collect::<Vec<_>>()
+            .into_iter();
         let Some(mut value) = terms.next() else {
             return self.constant(0);
         };
@@ -151,6 +166,24 @@ impl Builder {
             value = self.node(Op::Xor, vec![value, next]);
         }
         value
+    }
+    fn packed_xor_sum(&mut self, mut terms: Vec<usize>) -> usize {
+        terms.retain(|id| self.possible_bits[*id] != 0);
+        // OR disjoint ranges first, exposing byte packing such as (crc >> 8)
+        // | (t << 8) without introducing a nonlinear operation.
+        loop {
+            let pair = (0..terms.len()).find_map(|i| {
+                ((i + 1)..terms.len())
+                    .find(|j| self.possible_bits[terms[i]] & self.possible_bits[terms[*j]] == 0)
+                    .map(|j| (i, j))
+            });
+            let Some((i, j)) = pair else {
+                break;
+            };
+            terms[i] = self.node(Op::Or, vec![terms[i], terms[j]]);
+            terms.remove(j);
+        }
+        self.xor_sum(terms)
     }
     fn expr(&mut self, expression: &LinearExpr, crc: usize, data: usize, temps: &[usize]) -> usize {
         let mut terms = Vec::new();
@@ -228,7 +261,7 @@ impl Program {
 
 impl Equations {
     /// Word DAG grouping equal shifts and masks, with shared source operations.
-    pub fn word_operation_graph(&self) -> Graph {
+    pub fn masked_word_operation_graph(&self) -> Graph {
         let mut groups = BTreeMap::<(bool, i16), u64>::new();
         let mut constant = 0;
         for (output, expression) in self.outputs.iter().enumerate() {
@@ -260,6 +293,122 @@ impl Equations {
         let output = b.xor_sum(values);
         b.finish(output)
     }
+
+    /// Search invertible shift/XOR changes of basis in the feedback word.
+    /// Each candidate is algebraically derived from this matrix; no polynomial
+    /// constants or precomputed CRC formulas are used by the search.
+    pub fn word_operation_graph(&self) -> Graph {
+        let mut best = self.masked_word_operation_graph();
+        let model = CostModel::default();
+        let mut best_metrics = best.measure(&model).expect("generated word graph");
+        let (width, bits) = (self.spec.width(), self.spec.data_bits());
+        if bits > width || self.outputs.iter().any(|expr| expr.constant) {
+            return best;
+        }
+        let columns: Vec<_> = (0..bits).map(|i| self.evaluate(0, 1u64 << i)).collect();
+        // Identity first, then deterministic right/left triangular folds.
+        let folds = std::iter::once(0).chain((1..bits).flat_map(|n| [-i16::from(n), i16::from(n)]));
+        for fold in folds {
+            let graph = feedback_graph(self.spec, &columns, fold);
+            let metrics = graph.measure(&model).expect("generated feedback graph");
+            if (metrics.weighted_cost, metrics.critical_path)
+                < (best_metrics.weighted_cost, best_metrics.critical_path)
+            {
+                best = graph;
+                best_metrics = metrics;
+            }
+        }
+        best
+    }
+}
+
+fn low_mask(bits: u8) -> u64 {
+    if bits == 0 {
+        0
+    } else {
+        u64::MAX >> (64 - bits)
+    }
+}
+
+fn shifted(value: u64, shift: i16) -> u64 {
+    if shift >= 0 {
+        value << shift
+    } else {
+        value >> -shift
+    }
+}
+
+fn feedback_graph(spec: CrcSpec, columns: &[u64], fold: i16) -> Graph {
+    let (width, bits) = (spec.width(), spec.data_bits());
+    let word_mask = low_mask(bits);
+    let mut groups = BTreeMap::<i16, u64>::new();
+    for input in 0..bits {
+        let basis = 1u64 << input;
+        // Invert I+S using I+S+S^2+...; S is nilpotent in a finite word.
+        let mut inverse = basis;
+        if fold != 0 {
+            let mut term = shifted(basis, fold) & word_mask;
+            while term != 0 {
+                inverse ^= term;
+                term = shifted(term, fold) & word_mask;
+            }
+        }
+        let mut output = 0;
+        while inverse != 0 {
+            output ^= columns[inverse.trailing_zeros() as usize];
+            inverse &= inverse - 1;
+        }
+        for bit in 0..width {
+            if output & (1u64 << bit) != 0 {
+                *groups.entry(i16::from(bit) - i16::from(input)).or_default() |= basis;
+            }
+        }
+    }
+    let mut b = Builder::default();
+    let crc = b.node(Op::Crc, vec![]);
+    let data = b.node(Op::Data, vec![]);
+    let feedback_crc = match spec.order() {
+        BitOrder::MsbFirst => b.shift(crc, -i16::from(width - bits)),
+        BitOrder::LsbFirst => crc,
+    };
+    let feedback = b.node(Op::Xor, vec![feedback_crc, data]);
+    let mut feedback = b.and(feedback, word_mask);
+    if fold != 0 {
+        let value = b.shift(feedback, fold);
+        feedback = b.node(Op::Xor, vec![feedback, value]);
+        feedback = b.and(feedback, word_mask);
+    }
+    let remainder = if width == bits {
+        b.constant(0)
+    } else {
+        match spec.order() {
+            // Truncate all MSB terms together at the output.
+            BitOrder::MsbFirst => b.shift(crc, i16::from(bits)),
+            BitOrder::LsbFirst => {
+                let value = b.shift(crc, -i16::from(bits));
+                b.and(value, low_mask(width - bits))
+            }
+        }
+    };
+    let mut terms = vec![remainder];
+    for (shift, mask) in groups {
+        // A boundary mask is redundant when the common output truncation will
+        // discard precisely those bits (or a right shift already discards them).
+        let boundary = if shift >= 0 {
+            word_mask & (low_mask(width) >> shift)
+        } else {
+            word_mask & (u64::MAX << -shift)
+        };
+        let value = if mask == boundary {
+            feedback
+        } else {
+            b.and(feedback, mask)
+        };
+        terms.push(b.shift(value, shift));
+    }
+    let value = b.packed_xor_sum(terms);
+    let output = b.and(value, low_mask(width));
+    b.finish(output)
 }
 
 impl Graph {
@@ -489,7 +638,8 @@ impl Evaluation {
         let mut variants = Vec::new();
         for (name, graph) in [
             ("factored-bits", factored.operation_graph()),
-            ("masked-words", equations.word_operation_graph()),
+            ("masked-words", equations.masked_word_operation_graph()),
+            ("factored-words", equations.word_operation_graph()),
         ] {
             let metrics = graph.measure(&CostModel::default())?;
             variants.push(Variant {

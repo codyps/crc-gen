@@ -53,6 +53,10 @@ fn generated_rust_compiles_and_matches_polynomial_division() {
                 ("bits", equations.factor().rust()),
                 ("word", equations.word_rust()),
                 (
+                    "masked_word",
+                    equations.masked_word_operation_graph().rust().unwrap(),
+                ),
+                (
                     "rated_bits",
                     equations.factor().operation_graph().rust().unwrap(),
                 ),

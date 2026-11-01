@@ -413,47 +413,12 @@ impl Equations {
         }
     }
 
-    /// Group contributions with equal source-to-output shifts into masked words.
-    /// This is an alternative to bit-level factoring, not a claim of minimal code.
+    /// Emit the best word graph found by masked diagonals and reversible
+    /// shift/XOR feedback factoring. This is a heuristic, not a minimality proof.
     pub fn word_rust(&self) -> String {
-        let mut groups = BTreeMap::<(bool, i16), u64>::new();
-        let mut constant = 0u64;
-        for (output, expression) in self.outputs.iter().enumerate() {
-            if expression.constant {
-                constant |= 1u64 << output;
-            }
-            for term in &expression.terms {
-                let (data, input) = match *term {
-                    Term::Crc(i) => (false, i),
-                    Term::Data(i) => (true, i),
-                    Term::Temporary(_) => unreachable!("canonical equations have no temporaries"),
-                };
-                *groups
-                    .entry((data, output as i16 - i16::from(input)))
-                    .or_default() |= 1u64 << input;
-            }
-        }
-        let mut terms = Vec::new();
-        for ((data, shift), mask) in groups {
-            let source = if data { "data" } else { "crc" };
-            let term = format!("({source} & {mask:#x})");
-            terms.push(match shift.cmp(&0) {
-                std::cmp::Ordering::Less => format!("({term} >> {})", -shift),
-                std::cmp::Ordering::Greater => format!("({term} << {shift})"),
-                std::cmp::Ordering::Equal => term,
-            });
-        }
-        if constant != 0 {
-            terms.push(format!("{constant:#x}"));
-        }
-        if terms.is_empty() {
-            terms.push("0".into());
-        }
-        format!(
-            "{}    {}\n}}\n",
-            rust_header(self.spec),
-            terms.join("\n        ^ ")
-        )
+        self.word_operation_graph()
+            .rust()
+            .expect("generated word graph")
     }
 }
 

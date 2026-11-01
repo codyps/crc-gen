@@ -107,12 +107,18 @@ existing file. Backups protect against disk loss; transactions alone do not.
 
 ## Ratings and later CPU models
 
-Each job retains both factored-bit and masked-word variants as topologically
+Each job retains factored-bit, masked-word, and feedback-factored-word variants as topologically
 ordered, hash-consed word-operation DAGs. Exact constants, masks, shifts, edges
 and the execution schedule survive in the database. The exported DAG's Rust
 code describes the same operations that are rated. DAGs must be affine over
 GF(2); OR is allowed only for disjoint bit ranges. Zero and basis-vector checks
 against independent polynomial long division verify every result before saving.
+
+The `gf2-shift-fold-words-v2` optimizer searches single reversible shift/XOR
+folds of the shared feedback word, selecting by unit cost and dependency depth.
+The masked-word baseline remains a separate variant for comparison and re-rating.
+The new optimizer/source fingerprint creates a new run: historical results stay
+readable, but cannot be resumed as if they had used the new simplifier.
 
 Initial metrics are:
 
@@ -146,6 +152,6 @@ retains the requested model, its digest, run ID and grouped results. Zero weight
 These are algebraic ratings, not machine-instruction or cycle predictions. ISA
 lowering will need to account for register width, immediate encoding, folded
 operands, fused instructions, scheduling and throughput; masks and dependencies
-are retained for that work. Greedy factoring and diagonal word grouping do not
+are retained for that work. Greedy factoring, diagonal grouping and single-fold searches do not
 prove optimal forms. A later optimizer uses a new fingerprint/run and can be
 compared with the retained older results.

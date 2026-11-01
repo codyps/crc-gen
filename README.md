@@ -42,17 +42,24 @@ Output formats:
 | `simplified` | Canonical XOR sums for each output bit |
 | `equations` | Factored bit equations with shared `tN` temporaries (default) |
 | `rust` | A standalone `crc_update(crc: u64, data: u64) -> u64` using factored bits |
-| `word-rust` | An alternative Rust update grouping equal shifts into masked words |
+| `word-rust` | A Rust update using masked words and shared shift/XOR feedback folds |
 
 `--stats` writes operation counts to stderr, keeping generated code on stdout.
 Raw counts measure shared DAG nodes; canonical and factored counts measure binary
 XOR operations. Expanding a shared DAG into canonical sums can increase that
 intermediate count before factoring reduces it.
 
-Factoring is greedy, not globally optimal. Word output groups masks and shifts;
-it does not search all equivalent word-level programs. These methods do not
-promise to recover the shortest hand-optimized CCITT equation or the fastest
-code for a particular CPU.
+Word simplification combines the incoming data with the feedback bits of the CRC,
+then searches reversible changes of basis `t ^= t << k` and `t ^= t >> k`.
+The inverse transform determines the remaining masked shifts; disjoint ranges
+can be packed with OR. This rediscovers the four-bit CCITT fold for `0x1021`
+in both bit orders, without polynomial-specific rules. Updates wider than the
+CRC retain the masked-diagonal method.
+
+The search retains the lowest unit operation count, breaking ties by dependency
+depth, and keeps the masked-diagonal baseline if no candidate improves it.
+Factoring is heuristic: it searches single folds, not every equivalent program,
+and does not guarantee the shortest form or the fastest code for a CPU.
 
 ## Bit and polynomial conventions
 

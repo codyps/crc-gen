@@ -7,3 +7,7 @@ description = "Generate and simplify symbolic, table-free CRC update equations"
 repository = "https://github.com/codyps/crc-gen"
 
 [dependencies]
+serde = { version = "1", features = ["derive"] }
+
+[dev-dependencies]
+serde_json = "1"

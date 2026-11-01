@@ -2,7 +2,7 @@
 
 Generate symbolic CRC update expressions and simplify them into table-free XOR
 equations or standalone Rust code. This Rust implementation replaces the original
-C experiment and needs no dependencies or submodules.
+C experiment. It has no submodules.
 
 ```sh
 cargo test

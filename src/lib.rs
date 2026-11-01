@@ -21,6 +21,8 @@
 use std::collections::{BTreeMap, BTreeSet};
 use std::fmt::{self, Write};
 
+pub mod rating;
+
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum BitOrder {
     MsbFirst,

@@ -52,6 +52,14 @@ fn generated_rust_compiles_and_matches_polynomial_division() {
             for (kind, code) in [
                 ("bits", equations.factor().rust()),
                 ("word", equations.word_rust()),
+                (
+                    "rated_bits",
+                    equations.factor().operation_graph().rust().unwrap(),
+                ),
+                (
+                    "rated_word",
+                    equations.word_operation_graph().rust().unwrap(),
+                ),
             ] {
                 let module = format!("case_{i}_{j}_{kind}");
                 writeln!(source, "mod {module} {{\n{code}}}").unwrap();
